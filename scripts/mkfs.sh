@@ -47,12 +47,11 @@ build_busybox() {
     local busybox_dir="${WORK_ROOT}/build/busybox-${arch}"
     local busybox_bin="$busybox_dir/busybox"
     local cross=""
-    case "$arch" in
-        aarch64) cross="aarch64-linux-gnu-" ;;
-        riscv64) cross="riscv64-linux-gnu-" ;;
-        x86_64) cross="" ;;
-        *) echo "Unknown arch: $arch" >&2; exit 2 ;;
-    esac
+    if [[ "$arch" == "x86_64" ]]; then
+        cross=""
+    else
+        cross="${arch}-linux-gnu-"
+    fi
     pushd "$busybox_dir" >/dev/null
     make distclean
     make defconfig
@@ -111,32 +110,65 @@ create_init() {
     chmod +x init
 }
 
-pack_ramfs() {
+pack_fs() {
+    # 0. 准备工作目录
+    OUTPUT_DIR="${OUT_DIR:-${DEFAULT_OUT_DIR}}/$(dirname "$OUTPUT_FILE")"
+    mkdir -p "$OUTPUT_DIR"
+    TMP_DIR=$(mktemp -d)
+    cleanup() { rm -rf "$TMP_DIR"; }
+    trap cleanup EXIT
+    cd "$TMP_DIR"
+    echo "Creating minimal ramfs in $TMP_DIR"
+
+    # 1. 创建必要的目录结构
+    mkdir -p bin sbin usr/bin usr/sbin dev dev/pts etc proc sys
+    # 2. 使用 fakeroot 创建设备节点
+    fakeroot bash -c '
+        mknod dev/console c 5 1 || true
+        mknod dev/null c 1 3 || true
+        mknod dev/zero c 1 5 || true
+        mknod dev/tty c 5 0 || true
+        mknod dev/ttyS0 c 4 64 || true
+    '
+    # 3. 安装 busybox（如果 busybox 是动态链接的，复制所需的共享库） 并创建必要的符号链接
+    cp "$BUSYBOX_PATH" bin/
+    [[ -e bin/sh ]] || ln -s busybox bin/sh
+    if command -v ldd >/dev/null 2>&1; then
+        ldd_output="$(ldd "$BUSYBOX_PATH" 2>&1 || true)"
+        if ! printf '%s' "$ldd_output" | grep -q "not a dynamic executable"; then
+            echo "BusyBox is dynamically linked; copying dependent libraries..."
+            printf '%s' "$ldd_output" | awk '{ if ($3 ~ /^\//) print $3; else if ($1 ~ /^\//) print $1 }' | sort -u | while IFS= read -r lib; do
+                [ -f "$lib" ] || continue
+                rel_dir="${lib%/*}"
+                mkdir -p ".${rel_dir}"
+                cp -u "$lib" ".${lib}" 2>/dev/null || cp "$lib" ".${lib}" || true
+            done
+        fi
+    fi
+    # 4. 创建 init 脚本
+    create_init
+
+    # 5. 打包 ramfs
     local abs_out="$OUTPUT_DIR/$(basename "$OUTPUT_FILE")"
     echo "Packing ramfs -> $abs_out"
-    # Ensure deterministic permissions for reproducibility (optional)
     chmod 755 . || true
     find . -print0 | sort -z | cpio --null -H newc -o 2>/dev/null | gzip -9 > "$abs_out"
     echo "Minimal ramfs created: $abs_out"
     du -h "$abs_out" | awk '{print "Size: "$1}'
-}
 
-pack_rootfs() {
+    # 6. 打包 ext4 rootfs.img
     local img_out="$OUTPUT_DIR/rootfs.img"
     local size_mb=32
     echo "Packing ext4 rootfs (debugfs write) -> $img_out"
     dd if=/dev/zero of="$img_out" bs=1M count=$size_mb status=none
     mkfs.ext4 -q -F "$img_out"
-    # Use debugfs to import files
     if ! command -v debugfs >/dev/null 2>&1; then
         echo "Error: debugfs not found. Please install: sudo apt install e2fsprogs" >&2
         return 1
     fi
-    # Create directories
     find . -type d | while read -r d; do
         debugfs -w -R "mkdir ${d#.}" "$img_out" >/dev/null 2>&1
     done
-    # Write files
     find . -type f | while read -r f; do
         debugfs -w -R "write $f ${f#.}" "$img_out" >/dev/null 2>&1
     done
@@ -144,54 +176,26 @@ pack_rootfs() {
     du -h "$img_out" | awk '{print "Size: "$1}'
 }
 
-case "${1:-}" in
-    -h|--help|help)
-        usage
-        exit 0
-        ;;
-    *)
-        clone_busybox $1
+# 脚本入口点
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # 处理中断信号
+    trap 'echo -e "\n${YELLOW}用户中断操作${NC}"; exit 130' INT
 
-        build_busybox $1
+    case "${1:-}" in
+        -h|--help|help)
+            usage
+            exit 0
+            ;;
+        aarch64|riscv64|x86_64)
+            clone_busybox $1
 
-        # 0. 准备工作目录
-        OUTPUT_DIR="${OUT_DIR:-${DEFAULT_OUT_DIR}}/$(dirname "$OUTPUT_FILE")"
-        mkdir -p "$OUTPUT_DIR"
-        TMP_DIR=$(mktemp -d)
-        cleanup() { rm -rf "$TMP_DIR"; }
-        trap cleanup EXIT
-        cd "$TMP_DIR"
-        echo "Creating minimal ramfs in $TMP_DIR"
+            build_busybox $1
 
-        # 1. 创建必要的目录结构
-        mkdir -p bin sbin usr/bin usr/sbin dev dev/pts etc proc sys
-        # 2. 使用 fakeroot 创建设备节点
-        fakeroot bash -c '
-            mknod dev/console c 5 1 || true
-            mknod dev/null c 1 3 || true
-            mknod dev/zero c 1 5 || true
-            mknod dev/tty c 5 0 || true
-            mknod dev/ttyS0 c 4 64 || true
-        '
-        # 3. 安装 busybox（如果 busybox 是动态链接的，复制所需的共享库） 并创建必要的符号链接
-        cp "$BUSYBOX_PATH" bin/
-        [[ -e bin/sh ]] || ln -s busybox bin/sh
-        if command -v ldd >/dev/null 2>&1; then
-            ldd_output="$(ldd "$BUSYBOX_PATH" 2>&1 || true)"
-            if ! printf '%s' "$ldd_output" | grep -q "not a dynamic executable"; then
-                echo "BusyBox is dynamically linked; copying dependent libraries..."
-                printf '%s' "$ldd_output" | awk '{ if ($3 ~ /^\//) print $3; else if ($1 ~ /^\//) print $1 }' | sort -u | while IFS= read -r lib; do
-                    [ -f "$lib" ] || continue
-                    rel_dir="${lib%/*}"
-                    mkdir -p ".${rel_dir}"
-                    cp -u "$lib" ".${lib}" 2>/dev/null || cp "$lib" ".${lib}" || true
-                done
-            fi
-        fi
-        # 4. 创建 init 脚本
-        create_init
-        # 5. 打包镜像
-        pack_ramfs
-        pack_rootfs
-        ;;
-esac
+            pack_fs
+            ;;
+        *)
+            echo "Unknown cmd: $1" >&2
+            exit 2
+            ;;
+    esac
+fi
