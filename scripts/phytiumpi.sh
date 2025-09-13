@@ -7,7 +7,7 @@ WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
 PHYTIUM_REPO_URL=${PHYTIUM_REPO_URL:-"https://gitee.com/phytium_embedded/phytium-pi-os.git"}
 BUILD_DIR=$(cd "${WORK_ROOT}" && mkdir -p "${BUILD_DIR:-build}" && cd "${BUILD_DIR:-build}" && pwd -P)
 LOG_FILE=${LOG_FILE:-"${BUILD_DIR}/phytiumpi_patch.log"}
-PATCH_DIR=${PATCH_DIR:-"${WORK_ROOT}/patchs/phytiumpi"}
+PATCH_DIR=${PATCH_DIR:-"${WORK_ROOT}/patches/phytiumpi"}
 TARGET_IMAGES_DIR=${IMAGES_DIR:-"${WORK_ROOT}/IMAGES/phytiumpi/linux"}
 SRC_DIR="${BUILD_DIR}/phytium-pi-os"
 
@@ -34,7 +34,7 @@ usage() {
     printf '%s\n' "Environment variables:"
     printf '%s\n' "  PHYTIUM_REPO_URL   Git repo URL (default: https://gitee.com/phytium_embedded/phytium-pi-os.git)"
     printf '%s\n' "  BUILD_DIR          Build root (default: build) (normalized to absolute)"
-    printf '%s\n' "  PATCH_DIR          Patch directory (default: patchs/phytiumpi) (absolute)"
+    printf '%s\n' "  PATCH_DIR          Patch directory (default: patches/phytiumpi) (absolute)"
     printf '%s\n' "  IMAGES_DIR         Destination for copied images (default: IMAGES/phytiumpi/linux) (absolute)"
     printf '%s\n' "  VERBOSE=1          Enable extra patch fallback logging"
     printf '%s\n' "  LOG_FILE           Patch/application log file (default: BUILD_DIR/phytiumpi_patch.log)"
