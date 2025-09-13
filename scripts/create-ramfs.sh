@@ -111,6 +111,29 @@ pack_ramfs() {
     du -h "$abs_out" | awk '{print "Size: "$1}'
 }
 
+pack_rootfs() {
+    local img_out="$OUTPUT_DIR/rootfs.img"
+    local size_mb=32
+    echo "Packing ext4 rootfs (debugfs write) -> $img_out"
+    dd if=/dev/zero of="$img_out" bs=1M count=$size_mb status=none
+    mkfs.ext4 -q -F "$img_out"
+    # Use debugfs to import files
+    if ! command -v debugfs >/dev/null 2>&1; then
+        echo "Error: debugfs not found. Please install: sudo apt install e2fsprogs" >&2
+        return 1
+    fi
+    # Create directories
+    find . -type d | while read -r d; do
+        debugfs -w -R "mkdir ${d#.}" "$img_out" >/dev/null 2>&1
+    done
+    # Write files
+    find . -type f | while read -r f; do
+        debugfs -w -R "write $f ${f#.}" "$img_out" >/dev/null 2>&1
+    done
+    echo "rootfs.img created: $img_out"
+    du -h "$img_out" | awk '{print "Size: "$1}'
+}
+
 case "${1:-}" in
     -h|--help|help)
         usage
@@ -130,17 +153,14 @@ case "${1:-}" in
 
         # 1. 创建必要的目录结构
         mkdir -p bin sbin usr/bin usr/sbin dev dev/pts etc proc sys
-        # 2. 创建设备节点（如果有权限）
-        if [[ $(id -u) -eq 0 ]]; then
+        # 2. 使用 fakeroot 创建设备节点
+        fakeroot bash -c '
             mknod dev/console c 5 1 || true
             mknod dev/null c 1 3 || true
             mknod dev/zero c 1 5 || true
             mknod dev/tty c 5 0 || true
-            # Common first serial port major/minor (ttyS0)
             mknod dev/ttyS0 c 4 64 || true
-        else
-            echo "Warning: not root, skipping device nodes (console/null/zero). Some kernels may refuse to boot without /dev/console." >&2
-        fi
+        '
         # 3. 安装 busybox（如果 busybox 是动态链接的，复制所需的共享库） 并创建必要的符号链接
         cp "$BUSYBOX_PATH" bin/
         [[ -e bin/sh ]] || ln -s busybox bin/sh
@@ -156,9 +176,11 @@ case "${1:-}" in
                 done
             fi
         fi
+        ls -al "$TMP_DIR"
         # 4. 创建 init 脚本
         create_init
-        # 5. 打包为 initramfs.cpio.gz
+        # 5. 打包镜像
         pack_ramfs
+        pack_rootfs
         ;;
 esac
