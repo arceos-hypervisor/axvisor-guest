@@ -34,7 +34,7 @@ jobs:
       - run: cargo install cargo-binutils
 
       - name: Build (arch target)
-        run: ./build.sh arch -v
+        run: ./build.sh arceos -v
 
       - name: Prepare release files
         run: |
