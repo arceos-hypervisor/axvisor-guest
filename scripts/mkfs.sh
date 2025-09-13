@@ -31,26 +31,36 @@ usage() {
     printf '%s\n' '  * The init script drops to an interactive shell after mounting basic pseudo filesystems.' >&2
 }
 
-prepare_tools_and_busybox() {
-    local given="${1:-}"
-    for tool in cpio gzip; do
-        if ! command -v "$tool" >/dev/null 2>&1; then
-            echo "Error: required tool '$tool' not found in PATH" >&2
-            exit 1
-        fi
-    done
-    local bb
-    if [[ -n "$given" ]]; then
-        bb="$given"
+clone_busybox() {
+    local arch="$1"
+    local busybox_dir="${WORK_ROOT}/build/busybox-${arch}"
+    if [[ -d "$busybox_dir/.git" ]]; then
+        echo "[BusyBox] Already cloned: $busybox_dir" >&2
     else
-        bb="$(command -v busybox 2>/dev/null || echo /bin/busybox)"
+        echo "[BusyBox] Cloning busybox for $arch..." >&2
+        git clone --depth=1 git://busybox.net/busybox.git "$busybox_dir"
     fi
-    if [[ ! -f "$bb" ]]; then
-        echo "Error: busybox not found at $bb" >&2
-        echo "Install busybox or specify path explicitly." >&2
-        exit 1
-    fi
-    echo "$bb"
+}
+
+build_busybox() {
+    local arch="$1"
+    local busybox_dir="${WORK_ROOT}/build/busybox-${arch}"
+    local busybox_bin="$busybox_dir/busybox"
+    local cross=""
+    case "$arch" in
+        aarch64) cross="aarch64-linux-gnu-" ;;
+        riscv64) cross="riscv64-linux-gnu-" ;;
+        x86_64) cross="" ;;
+        *) echo "Unknown arch: $arch" >&2; exit 2 ;;
+    esac
+    pushd "$busybox_dir" >/dev/null
+    make distclean
+    make defconfig
+    sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+    sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
+    make -j$(nproc) CROSS_COMPILE="$cross"
+    popd >/dev/null
+    BUSYBOX_PATH="$busybox_bin"
 }
 
 create_init() {
@@ -140,7 +150,9 @@ case "${1:-}" in
         exit 0
         ;;
     *)
-        BUSYBOX_PATH="$(prepare_tools_and_busybox "${2:-}")"
+        clone_busybox $1
+
+        build_busybox $1
 
         # 0. 准备工作目录
         OUTPUT_DIR="${OUT_DIR:-${DEFAULT_OUT_DIR}}/$(dirname "$OUTPUT_FILE")"
@@ -176,7 +188,6 @@ case "${1:-}" in
                 done
             fi
         fi
-        ls -al "$TMP_DIR"
         # 4. 创建 init 脚本
         create_init
         # 5. 打包镜像

@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
 WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
 
-CREATE_RAMFS_SH=${CREATE_RAMFS_SH:-"${SCRIPT_DIR}/create-ramfs.sh"}
+CREATE_RAMFS_SH=${CREATE_RAMFS_SH:-"${SCRIPT_DIR}/mkfs.sh"}
 LINUX_REPO_URL=${LINUX_REPO_URL:-"https://github.com/torvalds/linux.git"}
 
 usage() {
@@ -44,7 +44,7 @@ do_rootfs() {
         exit 1
     fi
     echo "[RAMFS] ${CREATE_RAMFS_SH} -> "${IMAGES_DIR}"" >&2
-    . "${CREATE_RAMFS_SH}" "${IMAGES_DIR}"
+    . "${CREATE_RAMFS_SH}" "${1}"
 }
 
 cmd=${1:-}
@@ -76,7 +76,7 @@ case "${cmd}" in
             do_copy
             OUT_DIR=${IMAGES_DIR}
             export OUT_DIR
-            do_rootfs
+            do_rootfs "aarch64"
         fi
         ;;
     riscv64)
@@ -100,7 +100,7 @@ case "${cmd}" in
             do_copy
             OUT_DIR=${IMAGES_DIR}
             export OUT_DIR
-            do_rootfs
+            do_rootfs "riscv64"
         fi
         ;;
     x86|x86_64)
@@ -124,7 +124,7 @@ case "${cmd}" in
             do_copy
             OUT_DIR=${IMAGES_DIR}
             export OUT_DIR
-            do_rootfs
+            do_rootfs "x86_64"
         fi
         ;;
     *)
