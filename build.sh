@@ -93,6 +93,12 @@ case "${1:-}" in
         [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
         chmod +x "$script_path" 2>/dev/null || true
         exec "$script_path" riscv64 "$@" ;;
+    release)
+        shift
+        script_path="${SCRIPTS_DIR}/release.sh"
+        [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
+        chmod +x "$script_path" 2>/dev/null || true
+        exec "$script_path" "$@" ;;
     *)
         echo "[ERROR] Unknown platform: $1" >&2
         usage; exit 2 ;;

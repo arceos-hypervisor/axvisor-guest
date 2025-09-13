@@ -8,10 +8,42 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        rust-toolchain: [nightly]
+    env:
+      RUSTUP_TOOLCHAIN: ${{ matrix.rust-toolchain }}
+
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust-toolchain }}
+          components: rust-src, llvm-tools
+          targets: >
+            x86_64-unknown-none,
+            riscv64gc-unknown-none-elf,
+            aarch64-unknown-none-softfloat,
+            loongarch64-unknown-none-softfloat
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo install cargo-binutils
+
+      - name: Build (arch target)
+        run: ./build.sh arch -v
+
+      - name: Prepare release files
+        run: |
+          mkdir -p IMAGES/releases
+          ./build.sh release copy
+
       - name: Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         with:
-            files: |
-                IMAGES/*
+          files: |
+            IMAGES/releases/*
