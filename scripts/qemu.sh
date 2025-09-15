@@ -23,7 +23,7 @@ usage() {
     printf '%s\n' "  X86_CROSS_COMPILE       (default: empty/native)"
 }
 
-clone_repository() {
+clone_linux() {
     if [[ -d "${SRC_DIR}/.git" ]]; then
         echo "[SKIP] linux repo exists: ${SRC_DIR}" >&2
     else
@@ -51,14 +51,14 @@ cmd=${1:-}
 shift || true
 
 case "${cmd}" in
-    help|-h|--help)
+    ""|help|-h|--help)
         usage
         exit 0
         ;;
     aarch64)
         SRC_DIR=${BUILD_DIR:-"${WORK_ROOT}/build/qemu-aarch64-linux"}
         mkdir -p "${SRC_DIR}"
-        clone_repository
+        clone_linux
 
         pushd "${SRC_DIR}" >/dev/null
         if [ $# -eq 0 ]; then
@@ -82,7 +82,7 @@ case "${cmd}" in
     riscv64)
         SRC_DIR=${BUILD_DIR:-"${WORK_ROOT}/build/qemu-riscv64-linux"}
         mkdir -p "${SRC_DIR}"
-        clone_repository
+        clone_linux
 
         pushd "${SRC_DIR}" >/dev/null
         if [ $# -eq 0 ]; then
@@ -106,7 +106,7 @@ case "${cmd}" in
     x86|x86_64)
         SRC_DIR=${BUILD_DIR:-"${WORK_ROOT}/build/qemu-x86_64-linux"}
         mkdir -p "${SRC_DIR}"
-        clone_repository
+        clone_linux
 
         pushd "${SRC_DIR}" >/dev/null
         if [ $# -eq 0 ]; then
