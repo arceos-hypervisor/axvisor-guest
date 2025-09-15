@@ -1,4 +1,6 @@
 **/IMAGES/
 **/build/
+**/tmp/
+**/root/
 
 /target
