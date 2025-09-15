@@ -43,8 +43,8 @@ do_rootfs() {
         echo "[ERROR] ramfs script not exist: ${CREATE_RAMFS_SH}" >&2
         exit 1
     fi
-    echo "[RAMFS] ${CREATE_RAMFS_SH} -> "${IMAGES_DIR}"" >&2
-    . "${CREATE_RAMFS_SH}" "${1}"
+    echo "[RAMFS] ${CREATE_RAMFS_SH} -> ${IMAGES_DIR}" >&2
+    bash "${CREATE_RAMFS_SH}" "${1}"
 }
 
 cmd=${1:-}
