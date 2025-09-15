@@ -5,30 +5,26 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P
 WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
 
 DEFAULT_OUT_DIR="${WORK_ROOT}/IMAGES/qemu/linux"
-OUTPUT_FILE="${OUTPUT_FILE:-initramfs.cpio.gz}"
 
 usage() {
-    printf '%s\n' 'create-ramfs: generate a minimal initramfs (cpio+gzip) containing BusyBox and basic device nodes.' >&2
-    printf '%s\n' '' >&2
-    printf '%s\n' 'Usage:' >&2
-    printf '  %s [output_file] [busybox_path]\n' "$0" >&2
-    printf '  %s -h|--help|help\n' "$0" >&2
-    printf '%s\n' '' >&2
-    printf '%s\n' 'Positional arguments:' >&2
-    printf '  output_file     Output initramfs file name (default: initramfs.cpio.gz)\n' >&2
-    printf '  busybox_path    Path to busybox binary (default: first found in PATH, else /bin/busybox)\n' >&2
-    printf '%s\n' '' >&2
-    printf '%s\n' 'Commands:' >&2
-    printf '  help            Show this help and exit\n' >&2
-    printf '%s\n' '' >&2
-    printf '%s\n' 'Environment variables:' >&2
-    printf '  OUT_DIR         Base output directory (default: %s)\n' "${DEFAULT_OUT_DIR}" >&2
-    printf '                  The final file is written to: ${OUT_DIR}/<dir part of output_file>/<basename>.\n' >&2
-    printf '%s\n' '' >&2
-    printf '%s\n' 'Notes:' >&2
-    printf '%s\n' '  * Creates minimal /dev nodes only if running as root (console, null, zero, tty, ttyS0).' >&2
-    printf '%s\n' '  * If BusyBox is dynamically linked, required shared libraries are copied automatically.' >&2
-    printf '%s\n' '  * The init script drops to an interactive shell after mounting basic pseudo filesystems.' >&2
+    printf '%s\n' '$0: generate a fs image containing BusyBox and basic device nodes.'
+    printf '%s\n' ''
+    printf '%s\n' 'Usage:'
+    printf '%s\n' "  $0 <aarch64|riscv64|x86_64>"
+    printf '%s\n' "  $0 -h|--help|help"
+    printf '%s\n' ''
+    printf '%s\n' 'Commands:'
+    printf '%s\n' '  help            Show this help and exit'
+    printf '%s\n' '  aarch64         Build minimal fs for aarch64 (cross-compile busybox, pack images)'
+    printf '%s\n' '  riscv64         Build minimal fs for riscv64 (cross-compile busybox, pack images)'
+    printf '%s\n' '  x86_64          Build minimal fs for x86_64 (native busybox build, pack images)'
+    printf '%s\n' ''
+    printf '%s\n' 'Environment:'
+    printf '%s\n' "  OUT_DIR         Base output directory (default: ${DEFAULT_OUT_DIR})"
+    printf '%s\n' ''
+    printf '%s\n' 'Notes:'
+    printf '%s\n' '  * If BusyBox is dynamically linked, required shared libraries are copied automatically.'
+    printf '%s\n' '  * The init script drops to an interactive shell after mounting basic pseudo filesystems.'
 }
 
 clone_busybox() {
@@ -45,7 +41,6 @@ clone_busybox() {
 build_busybox() {
     local arch="$1"
     local busybox_dir="${WORK_ROOT}/build/busybox-${arch}"
-    local busybox_bin="$busybox_dir/busybox"
     local cross=""
     if [[ "$arch" == "x86_64" ]]; then
         cross=""
@@ -59,7 +54,7 @@ build_busybox() {
     sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
     make -j$(nproc) CROSS_COMPILE="$cross"
     popd >/dev/null
-    BUSYBOX_PATH="$busybox_bin"
+    BUSYBOX_PATH="$busybox_dir/busybox"
 }
 
 create_init() {
@@ -112,7 +107,7 @@ create_init() {
 
 pack_fs() {
     # 0. 准备工作目录
-    OUTPUT_DIR="${OUT_DIR:-${DEFAULT_OUT_DIR}}/$(dirname "$OUTPUT_FILE")"
+    OUTPUT_DIR="${OUT_DIR:-${DEFAULT_OUT_DIR}}"
     mkdir -p "$OUTPUT_DIR"
     TMP_DIR=$(mktemp -d)
     cleanup() { rm -rf "$TMP_DIR"; }
@@ -149,7 +144,7 @@ pack_fs() {
     create_init
 
     # 5. 打包 ramfs
-    local abs_out="$OUTPUT_DIR/$(basename "$OUTPUT_FILE")"
+    local abs_out="$OUTPUT_DIR/initramfs.cpio.gz"
     echo "Packing ramfs -> $abs_out"
     chmod 755 . || true
     find . -print0 | sort -z | cpio --null -H newc -o 2>/dev/null | gzip -9 > "$abs_out"
@@ -182,7 +177,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     trap 'echo -e "\n${YELLOW}用户中断操作${NC}"; exit 130' INT
 
     case "${1:-}" in
-        -h|--help|help)
+        ""|-h|--help|help)
             usage
             exit 0
             ;;
