@@ -1,31 +1,17 @@
 #!/usr/bin/env bash
 
-# 将 IMAGES 目录中的文件复制并重命名到 IMAGES/releases 目录
-copy_to_releases() {
+# 直接重命名文件到临时目录准备上传
+prepare_arceos_direct_release() {
     local images_dir="IMAGES"
-    local releases_dir="$images_dir/releases"
+    local temp_dir=$(mktemp -d)
     
-    echo "🚀 开始复制文件到 releases 目录..."
+    echo "🚀 开始准备 release 文件..."
+    echo "📁 临时目录: $temp_dir"
     
-    # 创建 releases 目录
-    if ! mkdir -p "$releases_dir"; then
-        echo "❌ 无法创建目录: $releases_dir"
-        exit 1
-    fi
-    
-    # 清空 releases 目录（如果有旧文件）
-    if [ "$(ls -A "$releases_dir" 2>/dev/null)" ]; then
-        echo "🧹 清空已存在的 releases 目录..."
-        rm -f "$releases_dir"/*
-    fi
-    
-    echo "📁 创建目录: $releases_dir"
-    
-    # 查找所有 .bin 文件并复制重命名
+    # 查找所有 .bin 文件并直接重命名复制到临时目录
     local file_count=0
-    find "$images_dir" -name "*.bin" -not -path "$releases_dir/*" | while IFS= read -r file; do
+    find "$images_dir" -name "*.bin" | while IFS= read -r file; do
         # 解析路径组件
-        # 例如: IMAGES/qemu/arceos/x86/arceos-static-smp4.bin
         relative_path="${file#$images_dir/}"  # 去掉 IMAGES/ 前缀
         
         # 分割路径
@@ -40,7 +26,7 @@ copy_to_releases() {
                 filename="${path_parts[3]}"  # arceos-static-smp4.bin
                 ;;
             3)
-                # 3层结构: board/project/file (如 phytiumpi 可能没有 arch 层)
+                # 3层结构: board/project/file
                 board="${path_parts[0]}"     # phytiumpi
                 project="${path_parts[1]}"   # arceos
                 arch="noarch"                # 默认值
@@ -72,8 +58,8 @@ copy_to_releases() {
             new_name="$filename"
         fi
         
-        # 复制文件
-        if cp "$file" "$releases_dir/$new_name"; then
+        # 复制文件到临时目录
+        if cp "$file" "$temp_dir/$new_name"; then
             echo "✅ $(printf '%-50s' "$file") -> $new_name"
             ((file_count++))
         else
@@ -82,106 +68,39 @@ copy_to_releases() {
     done
     
     echo ""
-    echo "🎉 复制完成！"
+    echo "🎉 准备完成！"
     echo "📊 统计信息:"
-    echo "   - 源目录: $images_dir"
-    echo "   - 目标目录: $releases_dir"
-    echo "   - 处理文件数: $(find "$images_dir" -name "*.bin" -not -path "$releases_dir/*" | wc -l)"
+    echo "   - 源目录: $images_dir" 
+    echo "   - 临时目录: $temp_dir"
+    echo "   - 处理文件数: $(find "$images_dir" -name "*.bin" | wc -l)"
     echo ""
     
-    echo "📋 releases 目录内容:"
-    if [ -d "$releases_dir" ]; then
-        ls -la "$releases_dir"
+    echo "📋 准备上传的文件:"
+    if [ -d "$temp_dir" ]; then
+        ls -la "$temp_dir"
         echo ""
-        echo "💾 总大小: $(du -sh "$releases_dir" | cut -f1)"
+        echo "💾 总大小: $(du -sh "$temp_dir" | cut -f1)"
     fi
-}
-
-# 显示预览（不实际复制）
-preview_rename() {
-    local images_dir="IMAGES"
     
-    echo "🔍 重命名预览 (不会实际复制文件):"
-    echo ""
-    printf "%-60s %s\n" "原文件路径" "新文件名"
-    echo "--------------------------------------------------------------------------------------------------------"
-    
-    find "$images_dir" -name "*.bin" | while IFS= read -r file; do
-        relative_path="${file#$images_dir/}"
-        IFS='/' read -ra path_parts <<< "$relative_path"
-        
-        case ${#path_parts[@]} in
-            4)
-                board="${path_parts[0]}"
-                arch="${path_parts[2]}"
-                filename="${path_parts[3]}"
-                ;;
-            3)
-                board="${path_parts[0]}"
-                arch="noarch"
-                filename="${path_parts[2]}"
-                ;;
-            *)
-                echo "$(printf '%-60s' "$file") [跳过-路径格式不支持]"
-                continue
-                ;;
-        esac
-        
-        if [[ "$filename" =~ ^arceos-(.+)$ ]]; then
-            suffix="${BASH_REMATCH[1]}"
-            extension="${suffix##*.}"
-            name_part="${suffix%.*}"
-            
-            if [ "$arch" = "noarch" ]; then
-                new_name="arceos-${board}-${name_part}.${extension}"
-            else
-                new_name="arceos-${board}-${arch}-${name_part}.${extension}"
-            fi
-        else
-            new_name="$filename"
-        fi
-        
-        printf "%-60s %s\n" "$file" "$new_name"
-    done
-}
-
-# 清理 releases 目录
-clean_releases() {
-    local releases_dir="IMAGES/releases"
-    
-    if [ -d "$releases_dir" ]; then
-        echo "🧹 清理 releases 目录..."
-        rm -rf "$releases_dir"
-        echo "✅ $releases_dir 已删除"
-    else
-        echo "ℹ️  $releases_dir 目录不存在"
-    fi
+    # 输出临时目录路径供 GitHub Actions 使用
+    echo "RELEASE_DIR=$temp_dir" >> $GITHUB_OUTPUT
 }
 
 main() {
     case "${1:-}" in
-        "copy" | "")
-            copy_to_releases
-            ;;
-        "preview")
-            preview_rename
-            ;;
-        "clean")
-            clean_releases
+        "prepare" | "")
+            prepare_arceos_direct_release
+            
             ;;
         *)
-            echo "用法: $0 {copy|preview|clean}"
+            echo "用法: $0 {prepare}"
             echo ""
             echo "选项:"
-            echo "  copy     - 复制文件到 IMAGES/releases 并重命名 (默认)"
-            echo "  preview  - 预览重命名效果，不实际复制"
-            echo "  clean    - 清理 IMAGES/releases 目录"
+            echo "  prepare  - 准备 release 文件到临时目录 (默认)"
             echo ""
             echo "示例:"
-            echo "  $0           # 执行复制"
-            echo "  $0 copy      # 执行复制"
-            echo "  $0 preview   # 预览效果"
-            echo "  $0 clean     # 清理目录"
+            echo "  $0           # 准备文件"
+            echo "  $0 prepare   # 准备文件"
             ;;
     esac
 }

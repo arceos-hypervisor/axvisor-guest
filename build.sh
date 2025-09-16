@@ -36,7 +36,7 @@ usage() {
     printf '%s\n' "    roc-rk3568-pc        -> scripts/roc-rk3568-pc.sh"
     printf '%s\n' "    arceos               -> scripts/arceos.sh"
     printf '%s\n' "    qemu-aarch64         -> scripts/qemu.sh aarch64"
-    printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh xx86_64"
+    printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh x86_64"
     printf '%s\n' "    qemu-riscv64         -> scripts/qemu.sh riscv64"
     printf '%s\n' ""
     printf '%s\n' "Examples:"

@@ -4,3 +4,4 @@
 **/root/
 
 /target
+.axconfig.toml

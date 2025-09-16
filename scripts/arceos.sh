@@ -199,14 +199,6 @@ run_make() {
 create_dirs() {
     local output_dir="$1"
     
-    # # 如果目录存在，清空其内容
-    # if [[ -d "$output_dir" ]]; then
-    #     log_verbose "目录已存在，清空内容: $output_dir"
-    #     if ! rm -rf "$output_dir"/*; then
-    #         find "$output_dir" -mindepth 1 -delete 2>/dev/null || true
-    #     fi
-    # fi
-    
     # 创建目录（如果不存在）
     if ! mkdir -p "$output_dir"; then
         die "无法创建目录: $output_dir"

@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+        contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -29,13 +31,29 @@ jobs:
             loongarch64-unknown-none-softfloat
       - uses: Swatinem/rust-cache@v2
       - run: cargo install cargo-binutils
-      - name: Build (arch target)
-        run: ./build.sh arceos -v
+      - name: Build ArceOS for all platforms
+        run: |
+          set -e
+          VERBOSE=1 ./build.sh qemu-x86_64 arceos
+          VERBOSE=1 ./build.sh qemu-riscv64 arceos
+          VERBOSE=1 ./build.sh qemu-aarch64 arceos
+          VERBOSE=1 ./build.sh phytiumpi arceos
+          VERBOSE=1 ./build.sh roc-rk3568-pc arceos
       - name: Prepare release files
-        run: ./build.sh release copy
+        id: prepare
+        run: ./build.sh release prepare
       - name: Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         with:
-          files: |
-            IMAGES/releases/*
+          files: ${{ steps.prepare.outputs.RELEASE_DIR }}/*
+          body: |
+            ## ArceOS 构建产物
+            
+            本次发布包含以下平台的构建产物:
+            - QEMU (x86_64, RISC-V, AArch64, LoongArch)
+            - 各种开发板支持
+            
+            文件命名格式: `arceos-{board}-{arch}-{config}.bin`
+            
+          generate_release_notes: true
