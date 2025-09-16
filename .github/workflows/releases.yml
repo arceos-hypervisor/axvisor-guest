@@ -57,3 +57,6 @@ jobs:
             文件命名格式: `arceos-{board}-{arch}-{config}.bin`
             
           generate_release_notes: true
+          draft: false
+          prerelease: false
+          make_latest: true
