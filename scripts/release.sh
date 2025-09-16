@@ -3,7 +3,9 @@
 # 直接重命名文件到临时目录准备上传
 prepare_arceos_direct_release() {
     local images_dir="IMAGES"
-    local temp_dir=$(mktemp -d)
+    # local temp_dir=$(mktemp -d)
+    local temp_dir="$PWD/release_temp"
+    mkdir -p "$temp_dir"
     
     echo "🚀 开始准备 release 文件..."
     echo "📁 临时目录: $temp_dir"
@@ -24,6 +26,7 @@ prepare_arceos_direct_release() {
                 project="${path_parts[1]}"   # arceos  
                 arch="${path_parts[2]}"      # x86
                 filename="${path_parts[3]}"  # arceos-static-smp4.bin
+                echo "Debug: 4层结构 - board: $board, project: $project, arch: $arch, filename: $filename"
                 ;;
             3)
                 # 3层结构: board/project/file

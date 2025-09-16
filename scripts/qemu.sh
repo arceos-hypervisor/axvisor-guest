@@ -337,12 +337,13 @@ parse_arceos_args() {
 copy_arceos_output() {
     local source="$1"
     local build_type="$2"
+    local arch="$3"
     
     local target="arceos-${build_type}-smp${ARCEOS_SMP}.bin"
-    local dest_path="$ARCEOS_IMAGES_DIR/$target"
+    local dest_path="$ARCEOS_IMAGES_DIR/$arch/$target"
     
     # 确保目标目录存在
-    mkdir -p "$ARCEOS_IMAGES_DIR" || die "无法创建目录: $ARCEOS_IMAGES_DIR"
+    mkdir -p "$ARCEOS_IMAGES_DIR/$arch" || die "无法创建目录: $ARCEOS_IMAGES_DIR/$arch"
     
     if [[ -f "$source" ]]; then
         success "找到构建产物: $source"
@@ -474,9 +475,9 @@ build_arceos() {
     local possible_output="${SRC_DIR}/${ARCEOS_APP}/${app_name}_${app_features}.bin"
 
     if [ "$arch" == "aarch64" ]; then
-        copy_arceos_output "$possible_output" "dyn"
+        copy_arceos_output "$possible_output" "dyn" "$arch"
     else
-        copy_arceos_output "$possible_output" "static"
+        copy_arceos_output "$possible_output" "static" "$arch"
     fi
 }
 
