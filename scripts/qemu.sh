@@ -97,51 +97,6 @@ info() {
     log "ℹ️  $1"
 }
 
-# 克隆仓库
-clone_repository() {
-    local repo_url="$1"
-    local src_dir="$2"
-    local build_dir="$3"
-    
-    # 参数验证
-    if [[ -z "$repo_url" || -z "$src_dir" || -z "$build_dir" ]]; then
-        die "clone_repository: 缺少必需参数"
-    fi
-    
-    # 确保构建目录存在
-    if [[ ! -d "$build_dir" ]]; then
-        mkdir -p "$build_dir" || die "无法创建构建目录: $build_dir"
-    fi
-    
-    if [[ ! -d "$src_dir" ]]; then
-        info "克隆仓库: $repo_url -> $src_dir"
-        if ! git clone --depth=1 "$repo_url" "$src_dir"; then
-            die "克隆仓库失败: $repo_url"
-        fi
-        success "仓库克隆完成"
-    else
-        info "源码已存在，跳过克隆: $src_dir"
-    fi
-}
-
-# 复制内核镜像
-do_copy() {
-    [[ -f "${KIMG_PATH}" ]] || die "内核镜像未找到: ${KIMG_PATH}"
-    info "复制镜像: ${KIMG_PATH} -> ${IMAGES_DIR}/"
-    cp -f "${KIMG_PATH}" "${IMAGES_DIR}/"
-    success "镜像复制完成"
-}
-
-# 创建根文件系统
-do_rootfs() {
-    if [ ! -f "${CREATE_RAMFS_SH}" ]; then
-        die "根文件系统脚本不存在: ${CREATE_RAMFS_SH}"
-    fi
-    info "创建根文件系统: ${CREATE_RAMFS_SH} -> ${IMAGES_DIR}"
-    bash "${CREATE_RAMFS_SH}" "${1}"
-    success "根文件系统创建完成"
-}
-
 # 执行 make 命令 (支持 VERBOSE)
 run_make() {
     local make_args=("$@")
@@ -154,73 +109,6 @@ run_make() {
         make "${make_args[@]}" >/dev/null 2>&1
     fi
 }
-
-# 构建 Linux 系统
-build_linux() {
-    local arch="$1"
-    shift
-    local commands=("$@")
-
-    SRC_DIR="${LINUX_SRC_DIR}"
-
-    make distclean || true
-    
-    case "${arch}" in
-        aarch64)
-            local linux_arch="arm64"
-            local cross_compile="${AARCH64_CROSS_COMPILE:-aarch64-linux-gnu-}"
-            local defconfig="defconfig"
-            local kimg_subpath="arch/arm64/boot/Image"
-            ;;
-        riscv64)
-            local linux_arch="riscv"
-            local cross_compile="${RISCV64_CROSS_COMPILE:-riscv64-linux-gnu-}"
-            local defconfig="defconfig"
-            local kimg_subpath="arch/riscv/boot/Image"
-            ;;
-        x86|x86_64)
-            local linux_arch="x86"
-            local cross_compile="${X86_CROSS_COMPILE:-}"
-            local defconfig="x86_64_defconfig"
-            local kimg_subpath="arch/x86/boot/bzImage"
-            arch="x86_64"  # 统一架构名称
-            ;;
-        *)
-            die "不支持的 Linux 架构: ${arch}"
-            ;;
-    esac
-
-    clone_repository "${LINUX_REPO_URL}" "${SRC_DIR}" "${BUILD_DIR}"
-    
-    pushd "${SRC_DIR}" >/dev/null
-    
-    if [[ ${#commands[@]} -eq 0 ]]; then
-        info "配置 Linux: make ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${defconfig}"
-        run_make ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${defconfig}"
-    fi
-    
-    info "构建 Linux: make -j$(nproc) ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${commands[*]:-}"
-    run_make -j"$(nproc)" ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${commands[@]}"
-    
-    popd >/dev/null
-
-    IMAGES_DIR="${LINUX_IMAGES_DIR}/${arch}"
-    mkdir -p "${IMAGES_DIR}"
-
-    # 如果是完整构建，复制镜像和创建根文件系统
-    if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
-        KIMG_PATH="${SRC_DIR}/${kimg_subpath}"
-        do_copy
-        
-        OUT_DIR=${IMAGES_DIR}
-        export OUT_DIR
-        do_rootfs "${arch}"
-    fi
-}
-
-# ArceOS 全局变量
-declare -g ARCEOS_APP="$DEFAULT_ARCEOS_APP"
-declare -g ARCEOS_LOG="$DEFAULT_ARCEOS_LOG"
 
 # 应用补丁
 apply_patches() {
@@ -297,6 +185,100 @@ apply_patches() {
     done
     popd >/dev/null
     return 0
+}
+
+clone_arceos() {
+    if [[ -d "${SRC_DIR}/.git" ]]; then
+        echo "[SKIP] linux repo exists: ${SRC_DIR}" >&2
+    else
+        echo "[CLONE] ${LINUX_REPO_URL} -> ${SRC_DIR}" >&2
+        git clone --depth=1 "${LINUX_REPO_URL}" "${SRC_DIR}"
+    fi
+}
+
+# 构建 Linux 系统
+build_linux() {
+    local arch="$1"
+    shift
+    local commands=("$@")
+    
+    case "${arch}" in
+        aarch64)
+            local linux_arch="arm64"
+            local cross_compile="${AARCH64_CROSS_COMPILE:-aarch64-linux-gnu-}"
+            local defconfig="defconfig"
+            local kimg_subpath="arch/arm64/boot/Image"
+            ;;
+        riscv64)
+            local linux_arch="riscv"
+            local cross_compile="${RISCV64_CROSS_COMPILE:-riscv64-linux-gnu-}"
+            local defconfig="defconfig"
+            local kimg_subpath="arch/riscv/boot/Image"
+            ;;
+        x86|x86_64)
+            local linux_arch="x86"
+            local cross_compile="${X86_CROSS_COMPILE:-}"
+            local defconfig="x86_64_defconfig"
+            local kimg_subpath="arch/x86/boot/bzImage"
+            arch="x86_64"  # 统一架构名称
+            ;;
+        *)
+            die "不支持的 Linux 架构: ${arch}"
+            ;;
+    esac
+    
+    pushd "${SRC_DIR}" >/dev/null
+
+    info "清理 Linux: make distclean"
+    make distclean || true
+
+    if [[ ${#commands[@]} -eq 0 ]]; then
+        info "配置 Linux: make ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${defconfig}"
+        run_make ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${defconfig}"
+    fi
+    
+    info "构建 Linux: make -j$(nproc) ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${commands[*]:-}"
+    run_make -j"$(nproc)" ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${commands[@]}"
+    
+    popd >/dev/null
+
+    # 如果是完整构建，复制镜像和创建根文件系统
+    if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
+        IMAGES_DIR="${LINUX_IMAGES_DIR}/${arch}"
+        mkdir -p "${IMAGES_DIR}"
+        KIMG_PATH="${SRC_DIR}/${kimg_subpath}"
+        [[ -f "${KIMG_PATH}" ]] || die "内核镜像未找到: ${KIMG_PATH}"
+        info "复制镜像: ${KIMG_PATH} -> ${IMAGES_DIR}/"
+        cp -f "${KIMG_PATH}" "${IMAGES_DIR}/"
+        success "镜像复制完成"
+        
+        OUT_DIR=${IMAGES_DIR}
+        export OUT_DIR
+        build_rootfs "${arch}"
+    fi
+}
+
+# 创建根文件系统
+build_rootfs() {
+    if [ ! -f "${CREATE_RAMFS_SH}" ]; then
+        die "根文件系统脚本不存在: ${CREATE_RAMFS_SH}"
+    fi
+    info "创建根文件系统: ${CREATE_RAMFS_SH} -> ${IMAGES_DIR}"
+    bash "${CREATE_RAMFS_SH}" "${1}"
+    success "根文件系统创建完成"
+}
+
+# ArceOS 全局变量
+declare -g ARCEOS_APP="$DEFAULT_ARCEOS_APP"
+declare -g ARCEOS_LOG="$DEFAULT_ARCEOS_LOG"
+
+clone_arceos() {
+    if [[ -d "${SRC_DIR}/.git" ]]; then
+        echo "[SKIP] linux repo exists: ${SRC_DIR}" >&2
+    else
+        echo "[CLONE] ${ARCEOS_REPO_URL} -> ${SRC_DIR}" >&2
+        git clone --depth=1 "${ARCEOS_REPO_URL}" "${SRC_DIR}"
+    fi
 }
 
 # 解析 ArceOS 参数
@@ -384,8 +366,6 @@ build_arceos() {
     local arch="$1"
     shift
     local remaining_args=("$@")
-
-    SRC_DIR="${ARCEOS_SRC_DIR}"
     
     # 初始化 ArceOS 变量
     ARCEOS_APP="$DEFAULT_ARCEOS_APP"
@@ -426,10 +406,6 @@ build_arceos() {
             ;;
     esac
 
-    clone_repository "${ARCEOS_REPO_URL}" "${SRC_DIR}" "${BUILD_DIR}"
-
-    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-    
     pushd "${SRC_DIR}" >/dev/null
     
     # 处理清理命令
@@ -481,67 +457,65 @@ build_arceos() {
     fi
 }
 
-# 主函数
-main() {
-    local arch="${1:-}"
-    local system="${2:-all}"
+build_os() {
+    arch="$1"
+    system="${2:-all}"
     shift 2 || true
-    
-    # 处理帮助
-    case "$system" in
-        ""|help|-h|--help)
-            usage
-            exit 0
-            ;;
-    esac
-    
-    # 验证架构参数
-    if [[ -z "$arch" ]]; then
-        die "请指定架构: aarch64, x86_64, 或 riscv64"
-    fi
-    
-    case "$arch" in
-        aarch64|riscv64|x86|x86_64)
-            ;;
-        *)
-            die "不支持的架构: $arch (支持: aarch64, x86_64, riscv64)"
-            ;;
-    esac
-    
+
     # 根据系统类型执行构建
     case "$system" in
         linux)
             info "构建 ${arch} Linux 系统"
+            SRC_DIR="${LINUX_SRC_DIR}"
+
+            clone_arceos
+
             build_linux "$arch" "$@"
             ;;
         arceos)
             info "构建 ${arch} ArceOS 系统"
+            SRC_DIR="${ARCEOS_SRC_DIR}"
+            clone_arceos
+
+            apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
+
             if [ -z "${ARCEOS_SMP:-}" ]; then
                 echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
-                local smp_args=(1 2)
+                smp_args=(1 2)
                 for smp in "${smp_args[@]}"; do
                     echo "=== 构建 SMP=$smp 配置 ==="
                     ARCEOS_SMP=$smp
                     build_arceos "$arch" "$@"
                     echo ""
                 done
-                return 0
+                exit 0
             else
                 build_arceos "$arch" "$@"
             fi
             ;;
         all)
             info "构建 ${arch} 所有系统 (Linux + ArceOS)"
+            SRC_DIR="${LINUX_SRC_DIR}"
+
+            clone_arceos
+
             build_linux "$arch" "$@"
-            echo ""
+
+            SRC_DIR="${ARCEOS_SRC_DIR}"
+            clone_arceos
+
+            apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
+
             if [ -z "${ARCEOS_SMP:-}" ]; then
-                local smp_args=(1 2)
+                echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
+                smp_args=(1 2)
                 for smp in "${smp_args[@]}"; do
+                    echo "=== 构建 SMP=$smp 配置 ==="
                     ARCEOS_SMP=$smp
                     build_arceos "$arch" "$@"
                     echo ""
                 done
-                return 0
+                exit 0
             else
                 build_arceos "$arch" "$@"
             fi
@@ -550,10 +524,17 @@ main() {
             die "未知系统: $system (支持: linux, arceos, all)"
             ;;
     esac
-    
-    success "构建完成!"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+    case "${1:-}" in
+        help|-h|--help|"")
+            usage; exit 0 ;;
+        aarch64|riscv64|x86|x86_64)
+            build_os "$@"
+            ;;
+        *)
+        echo "[ERROR] Unknown cmd: $1" >&2
+        usage; exit 2 ;;
+    esac
 fi
