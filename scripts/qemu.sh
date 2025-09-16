@@ -5,8 +5,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P
 WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
 BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
 
-# 脚本和仓库配置
-CREATE_RAMFS_SH=${CREATE_RAMFS_SH:-"${SCRIPT_DIR}/mkfs.sh"}
+source $SCRIPT_DIR/utils.sh
 
 # 仓库 URL
 LINUX_REPO_URL="https://github.com/torvalds/linux.git"
@@ -24,8 +23,6 @@ ARCEOS_LOG_FILE="${BUILD_DIR}/qemu_arceos_patch.log"
 
 LINUX_IMAGES_DIR="${WORK_ROOT}/IMAGES/qemu/linux"
 ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/qemu/arceos"
-
-QEMU_ARCH=(x86_64 aarch64 riscv64)
 
 # ArceOS 默认配置
 readonly DEFAULT_ARCEOS_PLATFORM="axplat-aarch64-dyn"
@@ -187,15 +184,6 @@ apply_patches() {
     return 0
 }
 
-clone_arceos() {
-    if [[ -d "${SRC_DIR}/.git" ]]; then
-        echo "[SKIP] linux repo exists: ${SRC_DIR}" >&2
-    else
-        echo "[CLONE] ${LINUX_REPO_URL} -> ${SRC_DIR}" >&2
-        git clone --depth=1 "${LINUX_REPO_URL}" "${SRC_DIR}"
-    fi
-}
-
 # 构建 Linux 系统
 build_linux() {
     local arch="$1"
@@ -227,7 +215,7 @@ build_linux() {
             ;;
     esac
     
-    pushd "${SRC_DIR}" >/dev/null
+    pushd "${LINUX_SRC_DIR}" >/dev/null
 
     info "清理 Linux: make distclean"
     make distclean || true
@@ -246,7 +234,7 @@ build_linux() {
     if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
         IMAGES_DIR="${LINUX_IMAGES_DIR}/${arch}"
         mkdir -p "${IMAGES_DIR}"
-        KIMG_PATH="${SRC_DIR}/${kimg_subpath}"
+        KIMG_PATH="${LINUX_SRC_DIR}/${kimg_subpath}"
         [[ -f "${KIMG_PATH}" ]] || die "内核镜像未找到: ${KIMG_PATH}"
         info "复制镜像: ${KIMG_PATH} -> ${IMAGES_DIR}/"
         cp -f "${KIMG_PATH}" "${IMAGES_DIR}/"
@@ -260,26 +248,17 @@ build_linux() {
 
 # 创建根文件系统
 build_rootfs() {
-    if [ ! -f "${CREATE_RAMFS_SH}" ]; then
-        die "根文件系统脚本不存在: ${CREATE_RAMFS_SH}"
+    if [ ! -f "${SCRIPT_DIR}/mkfs.sh" ]; then
+        die "根文件系统脚本不存在: ${SCRIPT_DIR}/mkfs.sh"
     fi
-    info "创建根文件系统: ${CREATE_RAMFS_SH} -> ${IMAGES_DIR}"
-    bash "${CREATE_RAMFS_SH}" "${1}"
+    info "创建根文件系统: ${SCRIPT_DIR}/mkfs.sh -> ${IMAGES_DIR}"
+    bash "${SCRIPT_DIR}/mkfs.sh" "${1}"
     success "根文件系统创建完成"
 }
 
 # ArceOS 全局变量
 declare -g ARCEOS_APP="$DEFAULT_ARCEOS_APP"
 declare -g ARCEOS_LOG="$DEFAULT_ARCEOS_LOG"
-
-clone_arceos() {
-    if [[ -d "${SRC_DIR}/.git" ]]; then
-        echo "[SKIP] linux repo exists: ${SRC_DIR}" >&2
-    else
-        echo "[CLONE] ${ARCEOS_REPO_URL} -> ${SRC_DIR}" >&2
-        git clone --depth=1 "${ARCEOS_REPO_URL}" "${SRC_DIR}"
-    fi
-}
 
 # 解析 ArceOS 参数
 parse_arceos_args() {
@@ -406,7 +385,7 @@ build_arceos() {
             ;;
     esac
 
-    pushd "${SRC_DIR}" >/dev/null
+    pushd "${ARCEOS_SRC_DIR}" >/dev/null
     
     # 处理清理命令
     if [[ " ${build_commands[*]} " =~ " clean " ]]; then
@@ -437,18 +416,18 @@ build_arceos() {
     
     info "构建 ArceOS: make ${make_args}"
 
-    make clean -C "$SRC_DIR" >/dev/null 2>&1 || true
+    make clean -C "$ARCEOS_SRC_DIR" >/dev/null 2>&1 || true
 
     if [[ $VERBOSE -eq 1 ]]; then
-        make -C "$SRC_DIR" $make_args
+        make -C "$ARCEOS_SRC_DIR" $make_args
     else
-        make -C "$SRC_DIR" $make_args >/dev/null 2>&1
+        make -C "$ARCEOS_SRC_DIR" $make_args >/dev/null 2>&1
     fi
     
     popd >/dev/null
     
     # 查找并复制构建产物
-    local possible_output="${SRC_DIR}/${ARCEOS_APP}/${app_name}_${app_features}.bin"
+    local possible_output="${ARCEOS_SRC_DIR}/${ARCEOS_APP}/${app_name}_${app_features}.bin"
 
     if [ "$arch" == "aarch64" ]; then
         copy_arceos_output "$possible_output" "dyn" "$arch"
@@ -466,16 +445,15 @@ build_os() {
     case "$system" in
         linux)
             info "构建 ${arch} Linux 系统"
-            SRC_DIR="${LINUX_SRC_DIR}"
 
-            clone_arceos
+            clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
 
             build_linux "$arch" "$@"
             ;;
         arceos)
             info "构建 ${arch} ArceOS 系统"
-            SRC_DIR="${ARCEOS_SRC_DIR}"
-            clone_arceos
+
+            clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
 
             apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
 
@@ -495,14 +473,12 @@ build_os() {
             ;;
         all)
             info "构建 ${arch} 所有系统 (Linux + ArceOS)"
-            SRC_DIR="${LINUX_SRC_DIR}"
 
-            clone_arceos
+            clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
 
             build_linux "$arch" "$@"
 
-            SRC_DIR="${ARCEOS_SRC_DIR}"
-            clone_arceos
+            clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
 
             apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
 
