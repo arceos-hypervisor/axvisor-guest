@@ -109,11 +109,8 @@ run_make() {
 
 # 构建 Linux 系统
 build_linux() {
-    local arch="$1"
-    shift
     local commands=("$@")
-    
-    case "${arch}" in
+    case "${ARCH}" in
         aarch64)
             local linux_arch="arm64"
             local cross_compile="${AARCH64_CROSS_COMPILE:-aarch64-linux-gnu-}"
@@ -131,10 +128,9 @@ build_linux() {
             local cross_compile="${X86_CROSS_COMPILE:-}"
             local defconfig="x86_64_defconfig"
             local kimg_subpath="arch/x86/boot/bzImage"
-            arch="x86_64"  # 统一架构名称
             ;;
         *)
-            die "不支持的 Linux 架构: ${arch}"
+            die "不支持的 Linux 架构: ${ARCH}"
             ;;
     esac
     
@@ -143,7 +139,7 @@ build_linux() {
     info "清理 Linux: make distclean"
     make distclean || true
 
-    if [[ ${#commands[@]} -eq 0 ]]; then
+    if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
         info "配置 Linux: make ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${defconfig}"
         run_make ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${defconfig}"
     fi
@@ -155,7 +151,7 @@ build_linux() {
 
     # 如果是完整构建，复制镜像和创建根文件系统
     if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
-        IMAGES_DIR="${LINUX_IMAGES_DIR}/${arch}"
+        IMAGES_DIR="${LINUX_IMAGES_DIR}/${ARCH}"
         mkdir -p "${IMAGES_DIR}"
         KIMG_PATH="${LINUX_SRC_DIR}/${kimg_subpath}"
         [[ -f "${KIMG_PATH}" ]] || die "内核镜像未找到: ${KIMG_PATH}"
@@ -163,9 +159,7 @@ build_linux() {
         cp -f "${KIMG_PATH}" "${IMAGES_DIR}/"
         success "镜像复制完成"
         
-        OUT_DIR=${IMAGES_DIR}
-        export OUT_DIR
-        build_rootfs "${arch}"
+        build_rootfs
     fi
 }
 
@@ -175,7 +169,9 @@ build_rootfs() {
         die "根文件系统脚本不存在: ${SCRIPT_DIR}/mkfs.sh"
     fi
     info "创建根文件系统: ${SCRIPT_DIR}/mkfs.sh -> ${IMAGES_DIR}"
-    bash "${SCRIPT_DIR}/mkfs.sh" "${1}"
+    OUT_DIR=${IMAGES_DIR}
+    export OUT_DIR
+    bash "${SCRIPT_DIR}/mkfs.sh" "${ARCH}"
     success "根文件系统创建完成"
 }
 
@@ -265,8 +261,6 @@ copy_arceos_output() {
 
 # 构建 ArceOS 系统
 build_arceos() {
-    local arch="$1"
-    shift
     local remaining_args=("$@")
     
     # 初始化 ArceOS 变量
@@ -288,11 +282,10 @@ build_arceos() {
     parse_arceos_args "${remaining_args[@]}"
     
     # 设置架构相关配置
-    case "${arch}" in
+    case "${ARCH}" in
         aarch64)
             local platform="axplat-aarch64-dyn"
             local app_features="aarch64-dyn"
-
             ;;
         riscv64)
             local platform="axplat-riscv64-qemu-virt"
@@ -301,10 +294,9 @@ build_arceos() {
         x86|x86_64)
             local platform="axplat-x86-pc"
             local app_features="x86-pc"
-            arch="x86_64"  # 统一架构名称
             ;;
         *)
-            die "不支持的 ArceOS 架构: ${arch}"
+            die "不支持的 ArceOS 架构: ${ARCH}"
             ;;
     esac
 
@@ -321,7 +313,7 @@ build_arceos() {
     # 构建 ArceOS
     local app_name="$(basename "$ARCEOS_APP")"
 
-    if [ "$arch" == "aarch64" ]; then
+    if [ "${ARCH}" == "aarch64" ]; then
         local make_args="A=$ARCEOS_APP MYPLAT=$platform APP_FEATURES=$app_features LOG=$ARCEOS_LOG LD_SCRIPT=link.x FEATURES=driver-dyn,paging"
     else
         local make_args="A=$ARCEOS_APP MYPLAT=$platform APP_FEATURES=$app_features LOG=$ARCEOS_LOG"
@@ -352,88 +344,87 @@ build_arceos() {
     # 查找并复制构建产物
     local possible_output="${ARCEOS_SRC_DIR}/${ARCEOS_APP}/${app_name}_${app_features}.bin"
 
-    if [ "$arch" == "aarch64" ]; then
-        copy_arceos_output "$possible_output" "dyn" "$arch"
+    if [ "${ARCH}" == "aarch64" ]; then
+        copy_arceos_output "$possible_output" "dyn" "${ARCH}"
     else
-        copy_arceos_output "$possible_output" "static" "$arch"
+        copy_arceos_output "$possible_output" "static" "${ARCH}"
     fi
-}
-
-build_os() {
-    arch="$1"
-    system="${2:-all}"
-    shift 2 || true
-
-    # 根据系统类型执行构建
-    case "$system" in
-        linux)
-            info "构建 ${arch} Linux 系统"
-
-            clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
-
-            build_linux "$arch" "$@"
-            ;;
-        arceos)
-            info "构建 ${arch} ArceOS 系统"
-
-            clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-            apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-            if [ -z "${ARCEOS_SMP:-}" ]; then
-                echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
-                smp_args=(1 2)
-                for smp in "${smp_args[@]}"; do
-                    echo "=== 构建 SMP=$smp 配置 ==="
-                    ARCEOS_SMP=$smp
-                    build_arceos "$arch" "$@"
-                    echo ""
-                done
-                exit 0
-            else
-                build_arceos "$arch" "$@"
-            fi
-            ;;
-        all)
-            info "构建 ${arch} 所有系统 (Linux + ArceOS)"
-
-            clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
-
-            build_linux "$arch" "$@"
-
-            clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-            apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-            if [ -z "${ARCEOS_SMP:-}" ]; then
-                echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
-                smp_args=(1 2)
-                for smp in "${smp_args[@]}"; do
-                    echo "=== 构建 SMP=$smp 配置 ==="
-                    ARCEOS_SMP=$smp
-                    build_arceos "$arch" "$@"
-                    echo ""
-                done
-                exit 0
-            else
-                build_arceos "$arch" "$@"
-            fi
-            ;;
-        *)
-            die "未知系统: $system (支持: linux, arceos, all)"
-            ;;
-    esac
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     case "${1:-}" in
         help|-h|--help|"")
-            usage; exit 0 ;;
+            usage
+            exit 0
+            ;;
         aarch64|riscv64|x86|x86_64)
-            build_os "$@"
+            ARCH="$1"
+            shift 1 || true
+            SYSTEM="${2:-all}"
+            shift 1 || true
+            case "${SYSTEM}" in
+                linux)
+                    info "构建 ${ARCH} Linux 系统"
+
+                    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
+
+                    build_linux "$@"
+                    ;;
+                arceos)
+                    info "构建 ${ARCH} ArceOS 系统"
+
+                    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
+
+                    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
+
+                    if [ -z "${ARCEOS_SMP:-}" ]; then
+                        echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
+                        smp_args=(1 2)
+                        for smp in "${smp_args[@]}"; do
+                            echo "=== 构建 SMP=$smp 配置 ==="
+                            ARCEOS_SMP=$smp
+                            build_arceos "$@"
+                            echo ""
+                        done
+                        exit 0
+                    else
+                        build_arceos "$@"
+                    fi
+                    ;;
+                all)
+                    info "构建 ${ARCH} 所有系统 (Linux + ArceOS)"
+
+                    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
+
+                    build_linux "$@"
+
+                    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
+
+                    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
+
+                    if [ -z "${ARCEOS_SMP:-}" ]; then
+                        echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
+                        smp_args=(1 2)
+                        for smp in "${smp_args[@]}"; do
+                            echo "=== 构建 SMP=$smp 配置 ==="
+                            ARCEOS_SMP=$smp
+                            build_arceos "$@"
+                            echo ""
+                        done
+                        exit 0
+                    else
+                        build_arceos "$@"
+                    fi
+                    ;;
+                *)
+                    die "未知系统: "${SYSTEM}" (支持: linux, arceos, all)"
+                    ;;
+            esac
             ;;
         *)
         echo "[ERROR] Unknown cmd: $1" >&2
-        usage; exit 2 ;;
+        usage
+        exit 2
+        ;;
     esac
 fi
