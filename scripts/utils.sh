@@ -5,6 +5,13 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
+WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
+BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
+
+# 日志文件
+LOG_FILE="${BUILD_DIR}/log.log"  # 默认日志文件
+
 # 日志函数
 log() {
     local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"

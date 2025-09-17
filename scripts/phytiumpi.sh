@@ -32,11 +32,6 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/phytiumpi/arceos"
 LINUX_SRC_DIR="${BUILD_DIR}/phytium-pi-os"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 
-# 日志文件
-LINUX_LOG_FILE="${BUILD_DIR}/phytiumpi_linux_patch.log"
-ARCEOS_LOG_FILE="${BUILD_DIR}/phytiumpi_arceos_patch.log"
-LOG_FILE="${LINUX_LOG_FILE}"  # 默认日志文件
-
 # ArceOS 默认配置
 readonly DEFAULT_PLATFORM="axplat-aarch64-dyn"
 readonly DEFAULT_APP="examples/helloworld-myplat"
@@ -89,8 +84,6 @@ cmd_build_linux() {
     echo "🚀 开始构建 Phytium Pi Linux 系统"
     echo "=================================="
     
-    LOG_FILE="$LINUX_LOG_FILE"
-    
     # 克隆仓库
     clone_repository "$PHYTIUM_LINUX_REPO_URL" "$LINUX_SRC_DIR"
     
@@ -103,10 +96,10 @@ cmd_build_linux() {
     
     info "配置构建: make phytiumpi_desktop_defconfig"
     if [[ $VERBOSE -eq 1 ]]; then
-        make phytiumpi_desktop_defconfig 2>&1 | tee -a "$LOG_FILE"
+        make phytiumpi_desktop_defconfig 2>&1
         local config_result=${PIPESTATUS[0]}
     else
-        make phytiumpi_desktop_defconfig >>"$LOG_FILE" 2>&1
+        make phytiumpi_desktop_defconfig 2>&1
         local config_result=$?
     fi
     
@@ -116,10 +109,10 @@ cmd_build_linux() {
     
     info "开始编译: make"
     if [[ $VERBOSE -eq 1 ]]; then
-        make 2>&1 | tee -a "$LOG_FILE"
+        make 2>&1
         local make_result=${PIPESTATUS[0]}
     else
-        make >>"$LOG_FILE" 2>&1
+        make 2>&1
         local make_result=$?
     fi
     
@@ -243,10 +236,10 @@ run_arceos_make() {
     
     # 执行构建
     if [[ $VERBOSE -eq 1 ]]; then
-        make -C "$src_dir" $make_args 2>&1 | tee -a "$LOG_FILE"
+        make -C "$src_dir" $make_args 2>&1
         local make_result=${PIPESTATUS[0]}
     else
-        make -C "$src_dir" $make_args >>"$LOG_FILE" 2>&1
+        make -C "$src_dir" $make_args 2>&1
         local make_result=$?
     fi
     
@@ -335,8 +328,6 @@ cmd_build_arceos() {
     echo "🚀 开始构建 ArceOS 系统"
     echo "========================"
     
-    LOG_FILE="$ARCEOS_LOG_FILE"
-    
     # 初始化变量
     init_arceos_vars
     
@@ -390,14 +381,14 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         arceos)
             if [ -z "${ARCEOS_SMP:-}" ]; then
                 echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
-                local smp_args=(1 2)
+                smp_args=(1 2)
                 for smp in "${smp_args[@]}"; do
                     echo "=== 构建 SMP=$smp 配置 ==="
                     ARCEOS_SMP=$smp
                     cmd_build_arceos "$@"
                     echo ""
                 done
-                return 0
+                exit 0
             else
                 cmd_build_arceos "$@"
             fi
@@ -407,13 +398,13 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             cmd_build_linux
             echo ""
             if [ -z "${ARCEOS_SMP:-}" ]; then
-                local smp_args=(1 2)
+                smp_args=(1 2)
                 for smp in "${smp_args[@]}"; do
                     ARCEOS_SMP=$smp
                     cmd_build_arceos "$@"
                     echo ""
                 done
-                return 0
+                exit 0
             else
                 cmd_build_arceos "$@"
             fi

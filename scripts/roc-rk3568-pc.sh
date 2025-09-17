@@ -6,14 +6,14 @@ set -euo pipefail
 #==============================================================================
 # 全局常量和默认配置
 #==============================================================================
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
+WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
+BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
 
-# 基础配置
-readonly SCRIPT_NAME="$(basename "$0")"
-readonly WORK_ROOT="$(pwd)"
+source $SCRIPT_DIR/utils.sh
 
 # 环境变量默认值
 VERBOSE="${VERBOSE:-0}"
-BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 # 仓库 URL
 LINUX_REPO_URL=""
@@ -28,10 +28,6 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/roc-rk3568-pc/arceos"
 # 源码目录
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 
-# 日志文件
-LINUX_LOG_FILE="${BUILD_DIR}/roc-rk3568-pc_linux_patch.log"
-ARCEOS_LOG_FILE="${BUILD_DIR}/roc-rk3568-pc_arceos_patch.log"
-LOG_FILE="${LINUX_LOG_FILE}"  # 默认日志文件
 
 # ArceOS 默认配置
 readonly DEFAULT_PLATFORM="axplat-aarch64-dyn"
@@ -51,8 +47,6 @@ ${SCRIPT_NAME} - ROC-RK3568-PC OS 构建助手
   all               构建 Linux 和 ArceOS (默认)
   linux             仅构建 Linux 系统
   arceos            仅构建 ArceOS 系统
-  clean             清理构建文件 (make clean)
-  remove, rm        完全删除源码目录
   -h, --help        显示此帮助信息
 
 ArceOS 选项:
@@ -80,224 +74,6 @@ ArceOS 选项:
   VERBOSE=1 ${SCRIPT_NAME} linux    # 详细模式构建 Linux (显示编译过程)
 
 EOF
-}
-
-# 日志函数
-log() {
-    local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-    printf "[%s] %s\n" "$timestamp" "$*" >&2
-    echo "[$timestamp] $*" >> "${LOG_FILE}"
-}
-
-# 详细日志 (仅在 VERBOSE=1 时输出)
-vlog() {
-    [[ $VERBOSE -eq 1 ]] && log "$@" || true
-}
-
-# 错误处理
-die() {
-    log "❌ 错误: $1"
-    exit "${2:-1}"
-}
-
-# 成功消息
-success() {
-    log "✅ $1"
-}
-
-# 信息消息
-info() {
-    log "ℹ️  $1"
-}
-
-# 警告消息
-warn() {
-    log "⚠️  $1"
-}
-
-# 验证目录权限
-check_directory_permissions() {
-    local dir="$1"
-    local parent_dir="$(dirname "$dir")"
-    
-    if [[ ! -d "$parent_dir" ]]; then
-        mkdir -p "$parent_dir" || die "无法创建目录: $parent_dir"
-    fi
-    
-    if [[ ! -w "$parent_dir" ]]; then
-        die "目录无写入权限: $parent_dir"
-    fi
-}
-
-# 克隆仓库
-clone_repository() {
-    local repo_url="$1"
-    local src_dir="$2"
-    local build_dir="$3"
-    
-    # 参数验证
-    if [[ -z "$repo_url" || -z "$src_dir" || -z "$build_dir" ]]; then
-        die "clone_repository: 缺少必需参数"
-    fi
-    
-    # 确保构建目录存在
-    if [[ ! -d "$build_dir" ]]; then
-        mkdir -p "$build_dir" || die "无法创建构建目录: $build_dir"
-    fi
-    
-    if [[ ! -d "$src_dir" ]]; then
-        info "克隆仓库: $repo_url -> $src_dir"
-        if ! git clone --depth=1 "$repo_url" "$src_dir"; then
-            die "克隆仓库失败: $repo_url"
-        fi
-        success "仓库克隆完成"
-    else
-        info "源码已存在，跳过克隆: $src_dir"
-    fi
-}
-
-# 应用补丁
-apply_patches() {
-    local patch_dir="$1"
-    local src_dir="$2"
-
-    if [[ -z "${patch_dir}" || -z "${src_dir}" ]]; then
-        echo "用法: apply_patches <patch_dir> <src_dir>" >&2
-        return 1
-    fi
-    
-    # Search patch directory
-    if [[ ! -d "${patch_dir}" ]]; then
-        log "[PATCH] Directory not found: ${patch_dir} (skip)"; return 0
-    fi
-    shopt -s nullglob
-    local patch_files=("${patch_dir}"/*.patch "${patch_dir}"/*.diff)
-    if (( ${#patch_files[@]} == 0 )); then
-        log "[PATCH] No patch files in ${patch_dir}"; return 0
-    fi
-    log "[PATCH] Found ${#patch_files[@]} patch file(s)"
-    pushd "${src_dir}" >/dev/null
-    mkdir -p .patch_stamps
-    for p in "${patch_files[@]}"; do
-        [[ -f "$p" ]] || continue
-        local base stamp type applied cid
-        base=$(basename "$p")
-        stamp=.patch_stamps/${base}.applied
-        if [[ -f "$stamp" ]]; then
-            log "[SKIP] $base (stamp exists)"; continue
-        fi
-        type="diff"
-        if grep -q '^From [0-9a-f]\{7,40\} ' "$p" 2>/dev/null && grep -q '^Subject:' "$p" 2>/dev/null; then
-            type="mbox"
-        fi
-        log "[APPLY] $base type=$type"
-        applied=0
-        if [[ $type == mbox ]]; then
-            cid=$(grep -m1 '^From [0-9a-f]\{7,40\} ' "$p" | awk '{print $2}') || true
-            if [[ -n "$cid" ]] && git rev-list --all | grep -q "^$cid"; then
-                log "[SKIP] $base commit $cid already in history"; echo > "$stamp"; applied=1
-            else
-                if git am --keep-cr < "$p" >>"${LOG_FILE}" 2>&1; then
-                    applied=1; echo > "$stamp"
-                else
-                    log "[WARN] git am failed; fallback to git apply path"; git am --abort || true
-                fi
-            fi
-        fi
-        if [[ $applied -eq 0 ]]; then
-            if git apply --check "$p" >/dev/null 2>&1; then
-                if git apply "$p" >>"${LOG_FILE}" 2>&1; then
-                    applied=1; echo > "$stamp"; log "  git apply ok"
-                fi
-            else
-                if git apply --reverse --check "$p" >/dev/null 2>&1; then
-                    log "[INFO] $base appears already applied (reverse check)"; echo > "$stamp"; applied=1
-                fi
-            fi
-        fi
-        if [[ $applied -eq 0 ]]; then
-            for plevel in 1 0; do
-                if patch -p${plevel} --dry-run < "$p" >/dev/null 2>&1; then
-                    if patch -p${plevel} < "$p" >>"${LOG_FILE}" 2>&1; then
-                        applied=1; echo > "$stamp"; log "  fallback patch -p${plevel} applied"; break
-                    fi
-                fi
-                vlog "  fallback patch -p${plevel} failed"
-            done
-        fi
-        if [[ $applied -eq 0 ]]; then
-            log "[ERROR] Cannot apply $base"; popd >/dev/null; return 1
-        fi
-    done
-    popd >/dev/null
-    return 0
-}
-
-# 删除源码目录
-cmd_remove() {
-    local target="${1:-linux}"
-    
-    case "$target" in
-        linux)
-            if [[ -d "$LINUX_SRC_DIR" ]]; then
-                info "删除 Linux 源码目录: $LINUX_SRC_DIR"
-                rm -rf "$LINUX_SRC_DIR"
-                success "Linux 源码目录已删除"
-            else
-                info "Linux 源码目录不存在: $LINUX_SRC_DIR"
-            fi
-            ;;
-        arceos)
-            if [[ -d "$ARCEOS_SRC_DIR" ]]; then
-                info "删除 ArceOS 源码目录: $ARCEOS_SRC_DIR"
-                rm -rf "$ARCEOS_SRC_DIR"
-                success "ArceOS 源码目录已删除"
-            else
-                info "ArceOS 源码目录不存在: $ARCEOS_SRC_DIR"
-            fi
-            ;;
-        all)
-            cmd_remove linux
-            cmd_remove arceos
-            ;;
-        *)
-            die "未知的删除目标: $target (可用: linux, arceos, all)"
-            ;;
-    esac
-}
-
-# 清理构建文件
-cmd_clean() {
-    local target="${1:-all}"
-    local clean_type="${2:-clean}"
-    
-    case "$target" in
-        linux)
-            if [[ -d "$LINUX_SRC_DIR" ]]; then
-                info "清理 Linux 构建文件..."
-                make -C "$LINUX_SRC_DIR" "$clean_type" || warn "Linux 清理失败"
-                success "Linux 清理完成"
-            else
-                warn "Linux 源码目录不存在: $LINUX_SRC_DIR"
-            fi
-            ;;
-        arceos)
-            if [[ -d "$ARCEOS_SRC_DIR" ]]; then
-                info "清理 ArceOS 构建文件..."
-                make -C "$ARCEOS_SRC_DIR" "$clean_type" || warn "ArceOS 清理失败"
-                success "ArceOS 清理完成"
-            else
-                warn "ArceOS 源码目录不存在: $ARCEOS_SRC_DIR"
-            fi
-            ;;
-        all)
-            cmd_clean linux "$clean_type"
-            cmd_clean arceos "$clean_type"
-            ;;
-        *)
-            die "未知的清理目标: $target (可用: linux, arceos, all)"
-            ;;
-    esac
 }
 
 # 构建 Linux 系统
@@ -404,10 +180,10 @@ run_arceos_make() {
     
     # 执行构建
     if [[ $VERBOSE -eq 1 ]]; then
-        make -C "$src_dir" $make_args 2>&1 | tee -a "$LOG_FILE"
+        make -C "$src_dir" $make_args 2>&1
         local make_result=${PIPESTATUS[0]}
     else
-        make -C "$src_dir" $make_args >>"$LOG_FILE" 2>&1
+        make -C "$src_dir" $make_args 2>&1
         local make_result=$?
     fi
     
@@ -496,16 +272,11 @@ cmd_build_arceos() {
     echo "🚀 开始构建 ArceOS 系统"
     echo "========================"
     
-    LOG_FILE="$ARCEOS_LOG_FILE"
-    
     # 初始化变量
     init_arceos_vars
     
     # 解析命令行参数
     parse_arceos_args "$@"
-    
-    # 检查目录权限
-    check_directory_permissions "$ARCEOS_IMAGES_DIR"
     
     # 显示配置信息
     info "ArceOS 构建配置:"
@@ -515,7 +286,7 @@ cmd_build_arceos() {
     info "  SMP 核心数: $ARCEOS_SMP"
     
     # 克隆仓库
-    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR" "$BUILD_DIR"
+    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
     
     # 应用补丁
     apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
@@ -539,21 +310,16 @@ cmd_build_arceos() {
     fi
 }
 
-# 主函数
-main() {
-    local cmd="${1:-}"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    cmd="${1:-}"
     shift || true
     
-    # 处理帮助选项
+    # 处理命令
     case "$cmd" in
         -h|--help)
             usage
             exit 0
             ;;
-    esac
-    
-    # 处理命令
-    case "$cmd" in
         linux)
             echo "not implemented yet"
             # cmd_build_linux
@@ -561,14 +327,14 @@ main() {
         arceos)
             if [ -z "${ARCEOS_SMP:-}" ]; then
                 echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
-                local smp_args=(1 2)
+                smp_args=(1 2)
                 for smp in "${smp_args[@]}"; do
                     echo "=== 构建 SMP=$smp 配置 ==="
                     ARCEOS_SMP=$smp
                     cmd_build_arceos "$@"
                     echo ""
                 done
-                return 0
+                exit 0
             else
                 cmd_build_arceos "$@"
             fi
@@ -578,13 +344,13 @@ main() {
             # cmd_build_linux
             echo ""
             if [ -z "${ARCEOS_SMP:-}" ]; then
-                local smp_args=(1 2)
+                smp_args=(1 2)
                 for smp in "${smp_args[@]}"; do
                     ARCEOS_SMP=$smp
                     cmd_build_arceos "$@"
                     echo ""
                 done
-                return 0
+                exit 0
             else
                 cmd_build_arceos "$@"
             fi
@@ -602,8 +368,4 @@ main() {
             exit 2
             ;;
     esac
-}
-
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
 fi

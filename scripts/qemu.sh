@@ -36,23 +36,19 @@ usage() {
 QEMU Linux & ArceOS 构建工具
 
 用法:
-  scripts/qemu.sh <arch> <system> [command] [options]
+  scripts/qemu.sh <命令> <系统> [options]
   scripts/qemu.sh help | -h | --help
 
-架构:
-  aarch64      ARM64 架构
-  x86_64       x86_64 架构
-  riscv64      RISC-V 64位架构
+命令:
+  aarch64               构建 Linux 和 ArceOS (默认)
+  x86_64                仅构建 Linux 系统
+  riscv64               仅构建 ArceOS 系统
+  help, -h, --help      显示此帮助信息
 
 系统:
   linux        构建 Linux 系统
   arceos       构建 ArceOS 系统
   all          构建所有系统 (默认)
-
-命令:
-  (default)    配置并构建系统
-  clean        清理构建文件
-  all          构建所有目标
 
 ArceOS 选项:
   -a, --app APP         应用程序路径
@@ -70,28 +66,6 @@ ArceOS 选项:
   scripts/qemu.sh riscv64 all          # 构建 RISC-V 所有系统
   scripts/qemu.sh aarch64 arceos -s 4  # 构建 4核 ARM64 ArceOS
 EOF
-}
-
-# 日志函数
-log() {
-    printf "[%s] %s\n" "$(date '+%H:%M:%S')" "$*" >&2
-}
-
-vlog() {
-    [[ $VERBOSE -eq 1 ]] && log "$@" || true
-}
-
-die() {
-    log "❌ 错误: $1"
-    exit "${2:-1}"
-}
-
-success() {
-    log "✅ $1"
-}
-
-info() {
-    log "ℹ️  $1"
 }
 
 # 执行 make 命令 (支持 VERBOSE)
