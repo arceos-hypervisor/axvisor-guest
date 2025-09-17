@@ -5,6 +5,39 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
+# 日志函数
+log() {
+    local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+    printf "[%s] %s\n" "$timestamp" "$*" >&2
+    echo "[$timestamp] $*" >> "${LOG_FILE}"
+}
+
+# 详细日志 (仅在 VERBOSE=1 时输出)
+vlog() {
+    [[ $VERBOSE -eq 1 ]] && log "$@" || true
+}
+
+# 错误处理
+die() {
+    log "❌ 错误: $1"
+    exit "${2:-1}"
+}
+
+# 成功消息
+success() {
+    log "✅ $1"
+}
+
+# 信息消息
+info() {
+    log "ℹ️  $1"
+}
+
+# 警告消息
+warn() {
+    log "⚠️  $1"
+}
+
 apply_patches() {
     local patch_dir="$1"
     local src_dir="$2"
