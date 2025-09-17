@@ -355,12 +355,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 cmd_build_arceos "$@"
             fi
             ;;
-        clean)
-            cmd_clean "${1:-all}" clean
-            ;;
-        remove|rm)
-            cmd_remove "${1:-all}"
-            ;;
         *)
             echo "❌ 未知命令: $cmd" >&2
             echo ""
