@@ -37,43 +37,39 @@ readonly DEFAULT_LOG_LEVEL="debug"
 
 # 输出帮助信息
 usage() {
-    cat << EOF
-${SCRIPT_NAME} - ROC-RK3568-PC OS 构建助手
+    printf '%s\n' "${SCRIPT_NAME} - ROC-RK3568-PC OS 构建助手"
+    printf '\n用法:\n'
+    printf '  %s [命令] [选项]\n' "$SCRIPT_NAME"
 
-用法:
-  ${SCRIPT_NAME} [命令] [选项]
+    printf '\n命令:\n'
+    printf '  all               构建 Linux 和 ArceOS (默认)\n'
+    printf '  linux             仅构建 Linux 系统\n'
+    printf '  arceos            仅构建 ArceOS 系统\n'
+    printf '  help, -h, --help  显示此帮助信息\n'
 
-命令:
-  all               构建 Linux 和 ArceOS (默认)
-  linux             仅构建 Linux 系统
-  arceos            仅构建 ArceOS 系统
-  -h, --help        显示此帮助信息
+    printf '\nArceOS 选项:\n'
+    printf '  -a, --app PATH            应用路径 (默认: %s)\n' "$DEFAULT_APP"
+    printf '  -p, --platform PLATFORM   平台名称 (默认: %s)\n' "$DEFAULT_PLATFORM"
+    printf '  -l, --log LEVEL           日志级别 (默认: %s)\n' "$DEFAULT_LOG_LEVEL"
+    printf '  -s, --smp COUNT           SMP 核心数\n'
 
-ArceOS 选项:
-  -a, --app PATH            应用路径 (默认: ${DEFAULT_APP})
-  -p, --platform PLATFORM   平台名称 (默认: ${DEFAULT_PLATFORM})
-  -l, --log LEVEL           日志级别 (默认: ${DEFAULT_LOG_LEVEL})
-  -s, --smp COUNT           SMP 核心数
+    printf '\n环境变量:\n'
+    printf '  LINUX_REPO_URL            Linux 仓库 URL\n'
+    printf '  ARCEOS_REPO_URL           ArceOS 仓库 URL\n'
+    printf '  VERBOSE=1                 启用详细日志输出和编译过程显示\n'
 
-环境变量:
-  LINUX_REPO_URL            Linux 仓库 URL
-  ARCEOS_REPO_URL           ArceOS 仓库 URL
-  VERBOSE=1                 启用详细日志输出和编译过程显示
+    printf '\n构建流程:\n'
+    printf '  1. 克隆仓库 (如果不存在)\n'
+    printf '  2. 应用补丁 (幂等操作)\n'
+    printf '  3. 配置和编译\n'
+    printf '  4. 复制构建产物到镜像目录\n'
 
-构建流程:
-  1. 克隆仓库 (如果不存在)
-  2. 应用补丁 (幂等操作)
-  3. 配置和编译
-  4. 复制构建产物到镜像目录
-
-示例:
-  ${SCRIPT_NAME}                    # 构建全部
-  ${SCRIPT_NAME} linux              # 仅构建 Linux
-  ${SCRIPT_NAME} arceos -s 4        # 构建 ArceOS (4核)
-  ${SCRIPT_NAME} remove all         # 删除所有源码
-  VERBOSE=1 ${SCRIPT_NAME} linux    # 详细模式构建 Linux (显示编译过程)
-
-EOF
+    printf '\n示例:\n'
+    printf '  %s                    # 构建全部\n' "$SCRIPT_NAME"
+    printf '  %s linux              # 仅构建 Linux\n' "$SCRIPT_NAME"
+    printf '  %s arceos -s 4        # 构建 ArceOS (4核)\n' "$SCRIPT_NAME"
+    printf '  %s remove all         # 删除所有源码\n' "$SCRIPT_NAME"
+    printf '  VERBOSE=1 %s linux    # 详细模式构建 Linux (显示编译过程)\n' "$SCRIPT_NAME"
 }
 
 # 构建 Linux 系统

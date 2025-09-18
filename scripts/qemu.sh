@@ -29,43 +29,39 @@ readonly DEFAULT_ARCEOS_PLATFORM="axplat-aarch64-dyn"
 readonly DEFAULT_ARCEOS_APP="examples/helloworld-myplat"
 readonly DEFAULT_ARCEOS_LOG="debug"
 
-
 # 显示帮助信息
 usage() {
-    cat << 'EOF'
-QEMU Linux & ArceOS 构建工具
+    printf '%s\n' "QEMU Linux & ArceOS 构建工具"
+    printf '\n用法:\n'
+    printf '  scripts/qemu.sh <命令> <系统> [options]\n'
+    printf '  scripts/qemu.sh help | -h | --help\n'
 
-用法:
-  scripts/qemu.sh <命令> <系统> [options]
-  scripts/qemu.sh help | -h | --help
+    printf '\n命令:\n'
+    printf '  aarch64               构建 Linux 和 ArceOS (默认)\n'
+    printf '  x86_64                仅构建 Linux 系统\n'
+    printf '  riscv64               仅构建 ArceOS 系统\n'
+    printf '  help, -h, --help      显示此帮助信息\n'
 
-命令:
-  aarch64               构建 Linux 和 ArceOS (默认)
-  x86_64                仅构建 Linux 系统
-  riscv64               仅构建 ArceOS 系统
-  help, -h, --help      显示此帮助信息
+    printf '\n系统:\n'
+    printf '  linux        构建 Linux 系统\n'
+    printf '  arceos       构建 ArceOS 系统\n'
+    printf '  all          构建所有系统 (默认)\n'
 
-系统:
-  linux        构建 Linux 系统
-  arceos       构建 ArceOS 系统
-  all          构建所有系统 (默认)
+    printf '\nArceOS 选项:\n'
+    printf '  -a, --app APP         应用程序路径\n'
+    printf '  -l, --log LEVEL       日志级别 (debug, info, warn, error)\n'
+    printf '  -s, --smp COUNT       SMP 核心数\n'
 
-ArceOS 选项:
-  -a, --app APP         应用程序路径
-  -l, --log LEVEL       日志级别 (debug, info, warn, error)
-  -s, --smp COUNT       SMP 核心数
+    printf '\n环境变量:\n'
+    printf '  VERBOSE=1             显示详细构建过程\n'
+    printf '  LINUX_REPO_URL        Linux 仓库地址\n'
+    printf '  ARCEOS_REPO_URL       ArceOS 仓库地址\n'
 
-环境变量:
-  VERBOSE=1             显示详细构建过程
-  LINUX_REPO_URL        Linux 仓库地址
-  ARCEOS_REPO_URL       ArceOS 仓库地址
-
-示例:
-  scripts/qemu.sh aarch64 linux        # 构建 ARM64 Linux
-  scripts/qemu.sh x86_64 arceos        # 构建 x86_64 ArceOS
-  scripts/qemu.sh riscv64 all          # 构建 RISC-V 所有系统
-  scripts/qemu.sh aarch64 arceos -s 4  # 构建 4核 ARM64 ArceOS
-EOF
+    printf '\n示例:\n'
+    printf '  scripts/qemu.sh aarch64 linux        # 构建 ARM64 Linux\n'
+    printf '  scripts/qemu.sh x86_64 arceos        # 构建 x86_64 ArceOS\n'
+    printf '  scripts/qemu.sh riscv64 all          # 构建 RISC-V 所有系统\n'
+    printf '  scripts/qemu.sh aarch64 arceos -s 4  # 构建 4核 ARM64 ArceOS\n'
 }
 
 # 执行 make 命令 (支持 VERBOSE)

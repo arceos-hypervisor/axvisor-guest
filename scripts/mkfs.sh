@@ -173,9 +173,6 @@ pack_fs() {
 
 # 脚本入口点
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    # 处理中断信号
-    trap 'echo -e "\n用户中断操作"; exit 130' INT
-
     case "${1:-}" in
         ""|-h|--help|help)
             usage
