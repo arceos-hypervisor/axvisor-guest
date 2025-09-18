@@ -10,52 +10,47 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
         contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        rust-toolchain: [nightly-2025-05-20]
-    env:
-      RUSTUP_TOOLCHAIN: ${{ matrix.rust-toolchain }}
 
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: ${{ matrix.rust-toolchain }}
+          toolchain: nightly-2025-05-20
           components: rust-src, llvm-tools, clippy, rustfmt
           targets: >
             x86_64-unknown-none,
             riscv64gc-unknown-none-elf,
             aarch64-unknown-none-softfloat,
             loongarch64-unknown-none-softfloat
-      - uses: Swatinem/rust-cache@v2
       - run: cargo install cargo-binutils
       - name: Build ArceOS for all platforms
         run: |
           set -e
-          VERBOSE=1 ./build.sh qemu-x86_64 arceos
-          VERBOSE=1 ./build.sh qemu-riscv64 arceos
-          VERBOSE=1 ./build.sh qemu-aarch64 arceos
-          VERBOSE=1 ./build.sh phytiumpi arceos
-          VERBOSE=1 ./build.sh roc-rk3568-pc arceos
+          VERBOSE=1 ./build.sh qemu-x86_64
+          VERBOSE=1 ./build.sh qemu-riscv64
+          VERBOSE=1 ./build.sh qemu-aarch64
+          VERBOSE=1 ./build.sh phytiumpi
+          VERBOSE=1 ./build.sh roc-rk3568-pc
+          VERBOSE=1 ./build.sh tac-e400-plc
+        
       - name: Prepare release files
-        id: prepare
-        run: ./build.sh release prepare
+        id: release
+        run: ./build.sh release
       - name: Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         with:
-          files: ${{ steps.prepare.outputs.RELEASE_DIR }}/*
+          files: ${{ steps.release.outputs.RELEASE_DIR }}/*
           body: |
-            ## ArceOS 构建产物
+            ## 客户机镜像文件
             
             本次发布包含以下平台的构建产物:
             - QEMU (x86_64, RISC-V, AArch64, LoongArch)
-            - 各种开发板支持
+            - 飞腾派 (Phytium Pi)
+            - ROC-RK3568-PC 开发板
+            - TAC-E400-PLC 工业计算机
             
             文件命名格式: `arceos-{board}-{arch}-{config}.bin`
-            
           generate_release_notes: true
           draft: false
           prerelease: false
