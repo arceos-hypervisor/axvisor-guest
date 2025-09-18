@@ -7,6 +7,9 @@ BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
+# 环境变量
+VERBOSE="${VERBOSE:-0}"
+
 # 仓库 URL
 LINUX_REPO_URL="https://github.com/torvalds/linux.git"
 ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
@@ -14,13 +17,7 @@ ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
 # 源码目录
 LINUX_SRC_DIR="${BUILD_DIR}/qemu_linux"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
-
-# 环境变量
-VERBOSE="${VERBOSE:-0}"
-
 ARCEOS_PATCH_DIR="${WORK_ROOT}/patches/arceos"
-ARCEOS_LOG_FILE="${BUILD_DIR}/qemu_arceos_patch.log"
-
 LINUX_IMAGES_DIR="${WORK_ROOT}/IMAGES/qemu/linux"
 ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/qemu/arceos"
 
