@@ -330,7 +330,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         aarch64|riscv64|x86|x86_64)
             ARCH="$1"
             shift 1 || true
-            SYSTEM="${2:-all}"
+            SYSTEM="${1:-all}"
             shift 1 || true
             case "${SYSTEM}" in
                 linux)
