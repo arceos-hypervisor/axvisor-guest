@@ -20,6 +20,12 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/tac-e400-plc/arceos"
 LINUX_SRC_DIR="${BUILD_DIR}/tac-e400-plc"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 
+# ArceOS 相关配置
+readonly DEFAULT_PLATFORM="axplat-aarch64-dyn"
+readonly DEFAULT_APP="examples/helloworld-myplat"
+readonly DEFAULT_LINKER="link.x"
+readonly DEFAULT_LOG_LEVEL="debug"
+
 # 输出帮助信息
 usage() {
     printf '%s\n' "${0} - TAC-E400 系列智能 PLC 产品系统构建助手"
