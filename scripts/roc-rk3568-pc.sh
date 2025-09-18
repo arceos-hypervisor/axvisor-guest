@@ -24,8 +24,6 @@ LINUX_PATCH_DIR="${WORK_ROOT}/patches/roc-rk3568-pc"
 ARCEOS_PATCH_DIR="${WORK_ROOT}/patches/arceos"
 LINUX_IMAGES_DIR="${WORK_ROOT}/IMAGES/roc-rk3568-pc/linux"
 ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/roc-rk3568-pc/arceos"
-
-# 源码目录
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 
 
