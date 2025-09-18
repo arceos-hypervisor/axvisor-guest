@@ -12,6 +12,7 @@ usage() {
     printf '%s\n' "Platforms:"
     printf '%s\n' "    phytiumpi            -> scripts/phytiumpi.sh"
     printf '%s\n' "    roc-rk3568-pc        -> scripts/roc-rk3568-pc.sh"
+    printf '%s\n' "    tac-e400-plc         -> scripts/tac-e400-plc.sh"
     printf '%s\n' "    qemu-aarch64         -> scripts/qemu.sh aarch64"
     printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh x86_64"
     printf '%s\n' "    qemu-riscv64         -> scripts/qemu.sh riscv64"
@@ -43,6 +44,12 @@ case "${1:-}" in
     roc-rk3568-pc)
         shift
         script_path="${SCRIPTS_DIR}/roc-rk3568-pc.sh"
+        [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
+        chmod +x "$script_path" 2>/dev/null || true
+        exec "$script_path" "$@" ;;
+    tac-e400-plc)
+        shift
+        script_path="${SCRIPTS_DIR}/tac-e400-plc.sh"
         [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
         chmod +x "$script_path" 2>/dev/null || true
         exec "$script_path" "$@" ;;
