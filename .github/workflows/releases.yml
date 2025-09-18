@@ -7,10 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    permissions:
-        contents: write
-
+    runs-on: [self-hosted, linux, intel]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -23,7 +20,7 @@ jobs:
             aarch64-unknown-none-softfloat,
             loongarch64-unknown-none-softfloat
       - run: cargo install cargo-binutils
-      - name: Build ArceOS for all platforms
+      - name: Build for all platforms
         run: |
           set -e
           VERBOSE=1 ./build.sh qemu-x86_64
