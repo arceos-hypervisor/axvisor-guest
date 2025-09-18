@@ -35,9 +35,9 @@ readonly DEFAULT_LOG_LEVEL="debug"
 
 # 输出帮助信息
 usage() {
-    printf '%s\n' "${SCRIPT_NAME} - ROC-RK3568-PC OS 构建助手"
+    printf '%s\n' "${0} - ROC-RK3568-PC OS 构建助手"
     printf '\n用法:\n'
-    printf '  %s [命令] [选项]\n' "$SCRIPT_NAME"
+    printf '  %s [命令] [选项]\n' "$0"
 
     printf '\n命令:\n'
     printf '  all               构建 Linux 和 ArceOS (默认)\n'
@@ -63,11 +63,11 @@ usage() {
     printf '  4. 复制构建产物到镜像目录\n'
 
     printf '\n示例:\n'
-    printf '  %s                    # 构建全部\n' "$SCRIPT_NAME"
-    printf '  %s linux              # 仅构建 Linux\n' "$SCRIPT_NAME"
-    printf '  %s arceos -s 4        # 构建 ArceOS (4核)\n' "$SCRIPT_NAME"
-    printf '  %s remove all         # 删除所有源码\n' "$SCRIPT_NAME"
-    printf '  VERBOSE=1 %s linux    # 详细模式构建 Linux (显示编译过程)\n' "$SCRIPT_NAME"
+    printf '  %s                    # 构建全部\n' "$0"
+    printf '  %s linux              # 仅构建 Linux\n' "$0"
+    printf '  %s arceos -s 4        # 构建 ArceOS (4核)\n' "$0"
+    printf '  %s remove all         # 删除所有源码\n' "$0"
+    printf '  VERBOSE=1 %s linux    # 详细模式构建 Linux (显示编译过程)\n' "$0"
 }
 
 # 构建 Linux 系统
@@ -116,8 +116,8 @@ ArceOS 构建选项:
   -h, --help               显示此帮助信息
 
 示例:
-  $SCRIPT_NAME arceos -a examples/myapp -s 4
-  $SCRIPT_NAME arceos --platform axplat-x86_64-dyn --log info
+  $0 arceos -a examples/myapp -s 4
+  $0 arceos --platform axplat-x86_64-dyn --log info
 EOF
 }
 
