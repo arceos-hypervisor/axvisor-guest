@@ -147,7 +147,7 @@ pack_fs() {
     local abs_out="$OUTPUT_DIR/initramfs.cpio.gz"
     echo "Packing ramfs -> $abs_out"
     chmod 755 . || true
-    find . -print0 | sort -z | cpio --null -H newc -o 2>/dev/null | gzip -9 > "$abs_out"
+    find . -print0 | sort -z 2>/dev/null | cpio --null -H newc -o 2>/dev/null | gzip -9 > "$abs_out"
     echo "Minimal ramfs created: $abs_out"
     du -h "$abs_out" | awk '{print "Size: "$1}'
 
