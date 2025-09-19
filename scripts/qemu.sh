@@ -25,6 +25,8 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/qemu/arceos"
 readonly DEFAULT_ARCEOS_PLATFORM="axplat-aarch64-dyn"
 readonly DEFAULT_ARCEOS_APP="examples/helloworld-myplat"
 readonly DEFAULT_ARCEOS_LOG="debug"
+declare -g ARCEOS_APP="$DEFAULT_ARCEOS_APP"
+declare -g ARCEOS_LOG="$DEFAULT_ARCEOS_LOG"
 
 # 显示帮助信息
 usage() {
@@ -61,7 +63,6 @@ usage() {
     printf '  scripts/qemu.sh aarch64 arceos -s 4  # 构建 4核 ARM64 ArceOS\n'
 }
 
-# 执行 make 命令 (支持 VERBOSE)
 run_make() {
     local make_args=("$@")
     
@@ -74,7 +75,6 @@ run_make() {
     fi
 }
 
-# 构建 Linux 系统
 build_linux() {
     local commands=("$@")
     case "${ARCH}" in
@@ -130,6 +130,14 @@ build_linux() {
     fi
 }
 
+cmd_build_linux() {
+    info "克隆 ${ARCH} Linux 源码仓库 $LINUX_REPO_URL"
+    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
+
+    info "开始构建 ${ARCH} Linux 系统..."
+    build_linux "$@"
+}
+
 # 创建根文件系统
 build_rootfs() {
     if [ ! -f "${SCRIPT_DIR}/mkfs.sh" ]; then
@@ -142,11 +150,6 @@ build_rootfs() {
     success "根文件系统创建完成"
 }
 
-# ArceOS 全局变量
-declare -g ARCEOS_APP="$DEFAULT_ARCEOS_APP"
-declare -g ARCEOS_LOG="$DEFAULT_ARCEOS_LOG"
-
-# 解析 ArceOS 参数
 parse_arceos_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -180,7 +183,6 @@ parse_arceos_args() {
     done
 }
 
-# 复制 ArceOS 构建产物
 copy_arceos_output() {
     local source="$1"
     local build_type="$2"
@@ -226,7 +228,6 @@ copy_arceos_output() {
     fi
 }
 
-# 构建 ArceOS 系统
 build_arceos() {
     local remaining_args=("$@")
     
@@ -318,70 +319,52 @@ build_arceos() {
     fi
 }
 
+cmd_build_arceos() {
+    info "克隆 ${ARCH} ArceOS 源码仓库：$ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
+    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
+
+    info "应用补丁..."
+    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
+
+    info "开始构建 ${ARCH} ArceOS 系统..."
+    if [ -z "${ARCEOS_SMP:-}" ]; then
+        echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
+        smp_args=(1 2)
+        for smp in "${smp_args[@]}"; do
+            echo "=== 构建 SMP=$smp 配置 ==="
+            ARCEOS_SMP=$smp
+            build_arceos "$@"
+            echo ""
+        done
+        exit 0
+    else
+        build_arceos "$@"
+    fi
+}
+
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    case "${1:-}" in
+    cmd="${1:-}"
+    shift 1 || true
+    case "${cmd}" in
         help|-h|--help|"")
             usage
             exit 0
             ;;
         aarch64|riscv64|x86|x86_64)
-            ARCH="$1"
-            shift 1 || true
+            ARCH="$cmd"
             SYSTEM="${1:-all}"
             shift 1 || true
             case "${SYSTEM}" in
                 linux)
-                    info "构建 ${ARCH} Linux 系统"
-
-                    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
-
-                    build_linux "$@"
+                    cmd_build_linux "$@"
                     ;;
                 arceos)
-                    info "构建 ${ARCH} ArceOS 系统"
-
-                    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-                    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-                    if [ -z "${ARCEOS_SMP:-}" ]; then
-                        echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
-                        smp_args=(1 2)
-                        for smp in "${smp_args[@]}"; do
-                            echo "=== 构建 SMP=$smp 配置 ==="
-                            ARCEOS_SMP=$smp
-                            build_arceos "$@"
-                            echo ""
-                        done
-                        exit 0
-                    else
-                        build_arceos "$@"
-                    fi
+                    cmd_build_arceos "$@"
                     ;;
                 all)
-                    info "构建 ${ARCH} 所有系统 (Linux + ArceOS)"
+                    cmd_build_linux "$@"
 
-                    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
-
-                    build_linux "$@"
-
-                    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-                    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-                    if [ -z "${ARCEOS_SMP:-}" ]; then
-                        echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
-                        smp_args=(1 2)
-                        for smp in "${smp_args[@]}"; do
-                            echo "=== 构建 SMP=$smp 配置 ==="
-                            ARCEOS_SMP=$smp
-                            build_arceos "$@"
-                            echo ""
-                        done
-                        exit 0
-                    else
-                        build_arceos "$@"
-                    fi
+                    cmd_build_arceos "$@"
                     ;;
                 *)
                     die "未知系统: "${SYSTEM}" (支持: linux, arceos, all)"
@@ -389,9 +372,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             esac
             ;;
         *)
-        echo "[ERROR] Unknown cmd: $1" >&2
-        usage
-        exit 2
+        die "未知命令: $cmd" >&2
         ;;
     esac
 fi
