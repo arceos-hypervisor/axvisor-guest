@@ -90,7 +90,7 @@ build_linux() {
             local defconfig="defconfig"
             local kimg_subpath="arch/riscv/boot/Image"
             ;;
-        x86|x86_64)
+        x86_64)
             local linux_arch="x86"
             local cross_compile="${X86_CROSS_COMPILE:-}"
             local defconfig="x86_64_defconfig"
@@ -259,7 +259,7 @@ build_arceos() {
             local platform="axplat-riscv64-qemu-virt"
             local app_features="riscv64-qemu-virt"
             ;;
-        x86|x86_64)
+        x86_64)
             local platform="axplat-x86-pc"
             local app_features="x86-pc"
             ;;
@@ -328,10 +328,9 @@ cmd_build_arceos() {
 
     info "开始构建 ${ARCH} ArceOS 系统..."
     if [ -z "${ARCEOS_SMP:-}" ]; then
-        echo "ARCEOS_SMP未定义，将构建多个SMP配置..."
         smp_args=(1 2)
         for smp in "${smp_args[@]}"; do
-            echo "=== 构建 SMP=$smp 配置 ==="
+            echo "=== 构建 SMP = $smp 配置 ==="
             ARCEOS_SMP=$smp
             build_arceos "$@"
             echo ""
@@ -350,7 +349,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             usage
             exit 0
             ;;
-        aarch64|riscv64|x86|x86_64)
+        aarch64|riscv64|x86_64)
             ARCH="$cmd"
             SYSTEM="${1:-all}"
             shift 1 || true
