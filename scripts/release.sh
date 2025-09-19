@@ -83,17 +83,33 @@ pack_images() {
     cd - >/dev/null
 }
 
-cmd_pack_images() {
-    IMAGES_DIR="${WORK_ROOT}/${1:-"IMAGES"}"
-    shift 1 || true
-    RELEASE_DIR="${WORK_ROOT}/${1:-"release"}"
-    shift 1 || true
+pack_parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --in_dir|--input_dir|-i)
+                IMAGES_DIR="$2"; shift 2;;
+            --out_dir|--output_dir|-o)
+                RELEASE_DIR="$2"; shift 2;;
+            *)
+                echo "Unknown option for github: $1" >&2
+                usage; exit 2;;
+        esac
+    done
+}
+
+pack() {
+    pack_parse_args "$@"
+
+    if [ ! -d "$IMAGES_DIR" ]; then
+        echo "错误: 输入目录不存在: $IMAGES_DIR"
+        exit 1
+    fi
 
     echo "开始打包 $IMAGES_DIR 目录下的系统镜像..."
     pack_images
 }
 
-parse_github_args() {
+github_parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --token)
@@ -109,28 +125,6 @@ parse_github_args() {
                 usage; exit 2;;
         esac
     done
-}
-
-validate_input() {
-    if [ -z "$GITHUB_TOKEN" ]; then
-        echo "错误: 需要设置 GITHUB_TOKEN 环境变量"
-        exit 1
-    fi
-    
-    if [ -z "$REPO" ]; then
-        echo "错误: 需要设置 REPO 环境变量 (格式: owner/repo)"
-        exit 1
-    fi
-    
-    if [ -z "$TAG" ]; then
-        echo "错误: 需要设置 TAG 环境变量"
-        exit 1
-    fi
-    
-    if [ ! -d "$ASSET_DIR" ]; then
-        echo "错误: 资源目录不存在: $ASSET_DIR"
-        exit 1
-    fi
 }
 
 github_create_release() {
@@ -196,10 +190,28 @@ github_upload() {
     fi
 }
 
-cmd_github() {
-    parse_github_args "$@"
+github() {
+    github_parse_args "$@"
 
-    validate_input
+    if [ -z "$GITHUB_TOKEN" ]; then
+        echo "错误: 需要设置 GITHUB_TOKEN 环境变量"
+        exit 1
+    fi
+    
+    if [ -z "$REPO" ]; then
+        echo "错误: 需要设置 REPO 环境变量 (格式: owner/repo)"
+        exit 1
+    fi
+    
+    if [ -z "$TAG" ]; then
+        echo "错误: 需要设置 TAG 环境变量"
+        exit 1
+    fi
+    
+    if [ ! -d "$ASSET_DIR" ]; then
+        echo "错误: 资源目录不存在: $ASSET_DIR"
+        exit 1
+    fi
 
     echo "开始发布到 GitHub Release"
     echo "仓库: $REPO"
@@ -240,10 +252,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     shift || true
     case "$cmd" in
         pack)
-            cmd_pack_images "$@"
+            pack "$@"
             ;;
         github)
-            cmd_github "$@"
+            github "$@"
             ;;
         -h|--help|help|"")
             usage
