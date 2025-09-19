@@ -146,8 +146,13 @@ build_arceos() {
     info "清理旧构建文件：make clean"
     make clean >/dev/null 2>&1 || true
 
-    info "开始编译: make A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=$platform APP_FEATURES=$app_features FEATURES=driver-dyn,page-alloc-4g SMP=1"
-    make A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=$platform APP_FEATURES=$app_features FEATURES=driver-dyn,page-alloc-4g SMP=1
+    if [ "${ARCH}" == "aarch64" ]; then
+        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g SMP=1"
+    else
+        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features SMP=1"
+    fi
+    info "开始编译: $make_args"
+    make $make_args
     popd >/dev/null
 
     info "复制构建产物 -> $ARCEOS_IMAGES_DIR"
