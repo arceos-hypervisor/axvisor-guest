@@ -90,7 +90,7 @@ apply_patches() {
             if [[ -n "$cid" ]] && git rev-list --all | grep -q "^$cid"; then
                 log "[SKIP] $base commit $cid already in history"; echo > "$stamp"; applied=1
             else
-                if git am --keep-cr < "$p" >>"${ARCEOS_LOG_FILE}" 2>&1; then
+                if git am --keep-cr < "$p" >>"${LOG_FILE}" 2>&1; then
                     applied=1; echo > "$stamp"
                 else
                     log "[WARN] git am failed; fallback to git apply path"; git am --abort || true
@@ -99,7 +99,7 @@ apply_patches() {
         fi
         if [[ $applied -eq 0 ]]; then
             if git apply --check "$p" >/dev/null 2>&1; then
-                if git apply "$p" >>"${ARCEOS_LOG_FILE}" 2>&1; then
+                if git apply "$p" >>"${LOG_FILE}" 2>&1; then
                     applied=1; echo > "$stamp"; log "  git apply ok"
                 fi
             else
@@ -111,7 +111,7 @@ apply_patches() {
         if [[ $applied -eq 0 ]]; then
             for plevel in 1 0; do
                 if patch -p${plevel} --dry-run < "$p" >/dev/null 2>&1; then
-                    if patch -p${plevel} < "$p" >>"${ARCEOS_LOG_FILE}" 2>&1; then
+                    if patch -p${plevel} < "$p" >>"${LOG_FILE}" 2>&1; then
                         applied=1; echo > "$stamp"; log "  fallback patch -p${plevel} applied"; break
                     fi
                 fi
