@@ -13,12 +13,12 @@ PHYTIUM_LINUX_REPO_URL="https://gitee.com/phytium_embedded/phytium-pi-os.git"
 PHYTIUM_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
 
 # 目录配置
+LINUX_SRC_DIR="${BUILD_DIR}/phytium-pi-os"
+ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 LINUX_PATCH_DIR="${WORK_ROOT}/patches/phytiumpi"
 ARCEOS_PATCH_DIR="${WORK_ROOT}/patches/arceos"
 LINUX_IMAGES_DIR="${WORK_ROOT}/IMAGES/phytiumpi/linux"
 ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/phytiumpi/arceos"
-LINUX_SRC_DIR="${BUILD_DIR}/phytium-pi-os"
-ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 
 # 输出帮助信息
 usage() {
@@ -96,7 +96,7 @@ cmd_build_arceos() {
     apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
 
     info "开始构建 ArceOS 系统..."
-    build_arceos
+    build_arceos "$@"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

@@ -15,7 +15,7 @@ usage() {
     printf '%s\n' '$0: generate a fs image containing BusyBox and basic device nodes.'
     printf '%s\n' ''
     printf '%s\n' 'Usage:'
-    printf '%s\n' "  $0 <aarch64|riscv64|x86_64>"
+    printf '%s\n' "  $0 <aarch64|riscv64|x86_64> --dir|-d <out_dir>"
     printf '%s\n' "  $0 -h|--help|help"
     printf '%s\n' ''
     printf '%s\n' 'Commands:'
@@ -177,6 +177,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         aarch64|riscv64|x86_64)
             ARCH="$cmd"
+            # Check if first arg is --dir or -d, only if at least one extra arg
+            if [[ $# -ge 2 && ( "$1" == "--dir" || "$1" == "-d" ) ]]; then
+                OUT_DIR="$2"
+                shift 2
+            fi
             info "克隆 busybox 源码仓库 $BUSYBOX_REPO_URL -> $BUSYBOX_SRC_DIR"
             clone_repository "$BUSYBOX_REPO_URL" "$BUSYBOX_SRC_DIR"
 

@@ -90,14 +90,13 @@ build_linux() {
 
     # 如果是完整构建，复制镜像和创建根文件系统
     if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
-        IMAGES_DIR="${LINUX_IMAGES_DIR}/${ARCH}"
-        mkdir -p "${IMAGES_DIR}"
+        mkdir -p "${LINUX_IMAGES_DIR}/${ARCH:-}"
         KIMG_PATH="${LINUX_SRC_DIR}/${kimg_subpath}"
         [[ -f "${KIMG_PATH}" ]] || die "内核镜像未找到: ${KIMG_PATH}"
-        info "复制镜像: ${KIMG_PATH} -> ${IMAGES_DIR}/"
-        cp -f "${KIMG_PATH}" "${IMAGES_DIR}/"
+        info "复制镜像: ${KIMG_PATH} -> ${LINUX_IMAGES_DIR}/${ARCH:-}"
+        cp -f "${KIMG_PATH}" "${LINUX_IMAGES_DIR}/${ARCH:-}/"
         
-        info "创建根文件系统: ${SCRIPT_DIR}/mkfs.sh -> ${IMAGES_DIR}"
+        info "创建根文件系统: ${SCRIPT_DIR}/mkfs.sh -> ${LINUX_IMAGES_DIR}/${ARCH:-}"
         build_rootfs
     fi
 }
@@ -117,9 +116,7 @@ build_rootfs() {
     if [ ! -f "${SCRIPT_DIR}/mkfs.sh" ]; then
         die "根文件系统脚本不存在: ${SCRIPT_DIR}/mkfs.sh"
     fi
-    OUT_DIR=${IMAGES_DIR}
-    export OUT_DIR
-    bash "${SCRIPT_DIR}/mkfs.sh" "${ARCH}"
+    bash "${SCRIPT_DIR}/mkfs.sh" "${ARCH}" "--dir ${LINUX_IMAGES_DIR}/${ARCH:-}"
     success "根文件系统创建完成"
 }
 
@@ -151,13 +148,13 @@ build_arceos() {
     else
         local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features SMP=1"
     fi
-    info "开始编译: $make_args"
+    info "开始编译: make $make_args"
     make $make_args
     popd >/dev/null
 
-    info "复制构建产物 -> $ARCEOS_IMAGES_DIR"
-    mkdir -p "$ARCEOS_IMAGES_DIR"
-    cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-dyn-smp1.bin"
+    info "复制构建产物 -> $ARCEOS_IMAGES_DIR/${ARCH:-}"
+    mkdir -p "$ARCEOS_IMAGES_DIR/${ARCH:-}"
+    cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/${ARCH:-}/arceos-dyn-smp1.bin"
 }
 
 cmd_build_arceos() {
@@ -168,9 +165,8 @@ cmd_build_arceos() {
     apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
 
     info "开始构建 ArceOS 系统..."
-    build_arceos
+    build_arceos "$@"
 }
-
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
