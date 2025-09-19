@@ -3,8 +3,13 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
 WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
+BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
 
-DEFAULT_OUT_DIR="${WORK_ROOT}/IMAGES/qemu/linux"
+source $SCRIPT_DIR/utils.sh
+
+BUSYBOX_REPO_URL="git://busybox.net/busybox.git"
+BUSYBOX_SRC_DIR="${BUILD_DIR}/busybox"
+BUSYBOX_PATCH_DIR="${WORK_ROOT}/patches/busybox"
 
 usage() {
     printf '%s\n' '$0: generate a fs image containing BusyBox and basic device nodes.'
@@ -20,41 +25,32 @@ usage() {
     printf '%s\n' '  x86_64          Build minimal fs for x86_64 (native busybox build, pack images)'
     printf '%s\n' ''
     printf '%s\n' 'Environment:'
-    printf '%s\n' "  OUT_DIR         Base output directory (default: ${DEFAULT_OUT_DIR})"
+    printf '%s\n' "  OUT_DIR         Base output directory"
     printf '%s\n' ''
     printf '%s\n' 'Notes:'
     printf '%s\n' '  * If BusyBox is dynamically linked, required shared libraries are copied automatically.'
     printf '%s\n' '  * The init script drops to an interactive shell after mounting basic pseudo filesystems.'
 }
 
-clone_busybox() {
-    local arch="$1"
-    local busybox_dir="${WORK_ROOT}/build/busybox-${arch}"
-    if [[ -d "$busybox_dir/.git" ]]; then
-        echo "[BusyBox] Already cloned: $busybox_dir" >&2
-    else
-        echo "[BusyBox] Cloning busybox for $arch..." >&2
-        git clone --depth=1 git://busybox.net/busybox.git "$busybox_dir"
-    fi
-}
-
 build_busybox() {
-    local arch="$1"
-    local busybox_dir="${WORK_ROOT}/build/busybox-${arch}"
     local cross=""
-    if [[ "$arch" == "x86_64" ]]; then
+    if [[ "$ARCH" == "x86_64" ]]; then
         cross=""
     else
-        cross="${arch}-linux-gnu-"
+        cross="${ARCH}-linux-gnu-"
     fi
-    pushd "$busybox_dir" >/dev/null
+    pushd "$BUSYBOX_SRC_DIR" >/dev/null
+    info "清理: make distclean"
     make distclean
+
+    info "配置: make make defconfig"
     make defconfig
+
+    info "构建: make -j$(nproc) CROSS_COMPILE=$cross"
     sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
     sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
     make -j$(nproc) CROSS_COMPILE="$cross"
     popd >/dev/null
-    BUSYBOX_PATH="$busybox_dir/busybox"
 }
 
 create_init() {
@@ -107,7 +103,7 @@ create_init() {
 
 pack_fs() {
     # 0. 准备工作目录
-    OUTPUT_DIR="${OUT_DIR:-${DEFAULT_OUT_DIR}}"
+    OUTPUT_DIR="${OUT_DIR:-${WORK_ROOT}/IMAGES/qemu/linux/${ARCH}}"
     mkdir -p "$OUTPUT_DIR"
     TMP_DIR=$(mktemp -d)
     cleanup() { rm -rf "$TMP_DIR"; }
@@ -126,10 +122,10 @@ pack_fs() {
         mknod dev/ttyS0 c 4 64 || true
     '
     # 3. 安装 busybox（如果 busybox 是动态链接的，复制所需的共享库） 并创建必要的符号链接
-    cp "$BUSYBOX_PATH" bin/
+    cp "$BUSYBOX_SRC_DIR/busybox" bin/
     [[ -e bin/sh ]] || ln -s busybox bin/sh
     if command -v ldd >/dev/null 2>&1; then
-        ldd_output="$(ldd "$BUSYBOX_PATH" 2>&1 || true)"
+        ldd_output="$(ldd "$BUSYBOX_SRC_DIR/busybox" 2>&1 || true)"
         if ! printf '%s' "$ldd_output" | grep -q "not a dynamic executable"; then
             echo "BusyBox is dynamically linked; copying dependent libraries..."
             printf '%s' "$ldd_output" | awk '{ if ($3 ~ /^\//) print $3; else if ($1 ~ /^\//) print $1 }' | sort -u | while IFS= read -r lib; do
@@ -171,22 +167,30 @@ pack_fs() {
     du -h "$img_out" | awk '{print "Size: "$1}'
 }
 
-# 脚本入口点
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    case "${1:-}" in
+    cmd="${1:-}"
+    shift || true
+    case "${cmd}" in
         ""|-h|--help|help)
             usage
             exit 0
             ;;
         aarch64|riscv64|x86_64)
-            clone_busybox $1
+            ARCH="$cmd"
+            info "克隆 busybox 源码仓库 $BUSYBOX_REPO_URL -> $BUSYBOX_SRC_DIR"
+            clone_repository "$BUSYBOX_REPO_URL" "$BUSYBOX_SRC_DIR"
 
-            build_busybox $1
+            info "应用补丁..."
+            apply_patches "$BUSYBOX_PATCH_DIR" "$BUSYBOX_SRC_DIR"
 
+            info "开始构建 busybox..."
+            build_busybox "$@"
+
+            info "打包文件系统..."
             pack_fs
             ;;
         *)
-            echo "Unknown cmd: $1" >&2
+            echo "Unknown cmd: ${cmd}" >&2
             exit 2
             ;;
     esac

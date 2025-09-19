@@ -23,12 +23,11 @@ jobs:
       - name: Build for all platforms
         run: |
           set -e
-          VERBOSE=1 ./build.sh qemu-x86_64
-          VERBOSE=1 ./build.sh qemu-riscv64
-          VERBOSE=1 ./build.sh qemu-aarch64
-          VERBOSE=1 ./build.sh phytiumpi
-          VERBOSE=1 ./build.sh roc-rk3568-pc
-          VERBOSE=1 ./build.sh tac-e400-plc
+          ./build.sh qemu-x86_64
+          ./build.sh qemu-riscv64
+          ./build.sh qemu-aarch64
+          ./build.sh phytiumpi
+          ./build.sh tac-e400-plc
         
       - name: Prepare release files
         id: release

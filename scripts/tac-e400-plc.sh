@@ -20,45 +20,27 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/tac-e400-plc/arceos"
 LINUX_SRC_DIR="${BUILD_DIR}/tac-e400-plc"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 
-# ArceOS 相关配置
-readonly DEFAULT_PLATFORM="axplat-aarch64-dyn"
-readonly DEFAULT_APP="examples/helloworld-myplat"
-readonly DEFAULT_LINKER="link.x"
-readonly DEFAULT_LOG_LEVEL="debug"
-
 # 输出帮助信息
 usage() {
     printf '%s\n' "${0} - TAC-E400 系列智能 PLC 产品系统构建助手"
     printf '\n用法:\n'
     printf '  %s [命令] [选项]\n' "$0"
-
     printf '\n命令:\n'
     printf '  all               构建 Linux 和 ArceOS (默认)\n'
     printf '  linux             仅构建 Linux 系统\n'
     printf '  arceos            仅构建 ArceOS 系统\n'
     printf '  help, -h, --help  显示此帮助信息\n'
-
-    printf '\nArceOS 选项:\n'
-    printf '  -a, --app PATH            应用路径 (默认: %s)\n' "$DEFAULT_APP"
-    printf '  -p, --platform PLATFORM   平台名称 (默认: %s)\n' "$DEFAULT_PLATFORM"
-    printf '  -l, --log LEVEL           日志级别 (默认: %s)\n' "$DEFAULT_LOG_LEVEL"
-    printf '  -s, --smp COUNT           SMP 核心数\n'
-
     printf '\n环境变量:\n'
     printf '  TAC_E400_LINUX_REPO_URL    Linux 仓库 URL\n'
     printf '  TAC_E400_ARCEOS_REPO_URL   ArceOS 仓库 URL\n'
-
     printf '\n构建流程:\n'
     printf '  1. 克隆仓库 (如果不存在)\n'
     printf '  2. 应用补丁\n'
     printf '  3. 配置和编译\n'
     printf '  4. 复制构建产物到镜像目录\n'
-
     printf '\n示例:\n'
     printf '  %s                    # 构建全部\n' "$0"
     printf '  %s linux              # 仅构建 Linux\n' "$0"
-    printf '  %s arceos -s 4        # 构建 ArceOS (4核)\n' "$0"
-    printf '  %s remove all         # 删除所有源码\n' "$0"
 }
 
 build_linux() {
@@ -79,14 +61,14 @@ build_linux() {
 }
 
 cmd_build_linux() {
-    info "克隆 Linux 源码仓库 $TAC_E400_LINUX_REPO_URL"
+    info "克隆 Linux 源码仓库 $TAC_E400_LINUX_REPO_URL -> $LINUX_SRC_DIR"
     clone_repository "$TAC_E400_LINUX_REPO_URL" "$LINUX_SRC_DIR"
 
     info "应用补丁..."
     apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
 
     info "开始构建 Linux 系统..."
-    build_linux
+    build_linux "$@"
 }
 
 build_arceos() {
@@ -123,15 +105,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             exit 0
             ;;
         linux)
-            cmd_build_linux
+            cmd_build_linux "$@"
             ;;
         arceos)
-            cmd_build_arceos
+            cmd_build_arceos "$@"
             ;;
         all|"")
-            cmd_build_linux
+            cmd_build_linux "$@"
 
-            cmd_build_arceos
+            cmd_build_arceos "$@"
             ;;
         *)
             die "未知命令: $cmd" >&2
