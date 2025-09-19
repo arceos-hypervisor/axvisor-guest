@@ -31,7 +31,7 @@ jobs:
         
       - name: Prepare release files
         id: release
-        run: ./build.sh release
+        run: ./build.sh release pack
       - name: Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
