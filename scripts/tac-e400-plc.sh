@@ -60,7 +60,7 @@ build_linux() {
     cp "$LINUX_SRC_DIR/EDGE_KERNEL/arch/arm64/boot/dts/phytium/e2000q-hanwei-board.dtb" "$LINUX_IMAGES_DIR/"
 }
 
-cmd_build_linux() {
+linux() {
     info "克隆 Linux 源码仓库 $TAC_E400_LINUX_REPO_URL -> $LINUX_SRC_DIR"
     clone_repository "$TAC_E400_LINUX_REPO_URL" "$LINUX_SRC_DIR"
 
@@ -85,7 +85,7 @@ build_arceos() {
     cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-dyn-smp1.bin"
 }
 
-cmd_build_arceos() {
+arceos() {
     info "克隆 ArceOS 源码仓库 $TAC_E400_ARCEOS_REPO_URL"
     clone_repository "$TAC_E400_ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
 
@@ -105,15 +105,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             exit 0
             ;;
         linux)
-            cmd_build_linux "$@"
+            linux "$@"
             ;;
         arceos)
-            cmd_build_arceos "$@"
+            arceos "$@"
             ;;
         all|"")
-            cmd_build_linux "$@"
+            linux "$@"
 
-            cmd_build_arceos "$@"
+            arceos "$@"
             ;;
         *)
             die "未知命令: $cmd" >&2

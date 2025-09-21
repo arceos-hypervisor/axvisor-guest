@@ -101,7 +101,7 @@ build_linux() {
     fi
 }
 
-cmd_build_linux() {
+linux() {
     info "克隆 ${ARCH} Linux 源码仓库 $LINUX_REPO_URL"
     clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
 
@@ -157,7 +157,7 @@ build_arceos() {
     cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/${ARCH:-}/arceos-dyn-smp1.bin"
 }
 
-cmd_build_arceos() {
+arceos() {
     info "克隆 ArceOS 源码仓库 $ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
     clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
 
@@ -182,15 +182,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             shift 1 || true
             case "${SYSTEM}" in
                 linux)
-                    cmd_build_linux "$@"
+                    linux "$@"
                     ;;
                 arceos)
-                    cmd_build_arceos "$@"
+                    arceos "$@"
                     ;;
                 all)
-                    cmd_build_linux "$@"
+                    linux "$@"
 
-                    cmd_build_arceos "$@"
+                    arceos "$@"
                     ;;
                 *)
                     die "未知系统: "${SYSTEM}" (支持: linux, arceos, all)"
@@ -201,9 +201,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             for arch in aarch64 riscv64 x86_64; do
                 ARCH="$arch"
                 info "=== 构建架构: $ARCH ==="
-                cmd_build_linux "$@"
+                linux "$@"
 
-                cmd_build_arceos "$@"
+                arceos "$@"
             done
             ;;
         *)
