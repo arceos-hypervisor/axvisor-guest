@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -u
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
 WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
@@ -8,7 +8,7 @@ WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
 IMAGES_DIR="${WORK_ROOT}/IMAGES"
 RELEASE_DIR="${WORK_ROOT}/release"
 GITHUB_TOKEN=""
-REPO="axvisor-guest"
+REPO="arceos-hypervisor/axvisor-guest"
 TAG="v0.0.10"
 ASSET_DIR="$RELEASE_DIR"
 
@@ -128,64 +128,41 @@ github_parse_args() {
 }
 
 github_create_release() {
-    local repo="$1"
-    local tag="$2"
-    local title="${3:-Release $tag}"
-    local notes="${4:-Auto-generated release}"
-    local draft="${5:-false}"
-    local prerelease="${6:-false}"
-    
-    local api_url="https://api.github.com/repos/$repo/releases"
-    
-    local response=$(curl -s -w "%{http_code}" -X POST "$api_url" \
+    repo="$1"
+    tag="$2"
+    response=$(curl -s -w "%{http_code}" -X POST "https://api.github.com/repos/$repo/releases" \
         -H "Authorization: token $GITHUB_TOKEN" \
         -H "Accept: application/vnd.github.v3+json" \
-        -d "{
-            \"tag_name\": \"$tag\",
-            \"name\": \"$title\",
-            \"body\": \"$notes\",
-            \"draft\": $draft,
-            \"prerelease\": $prerelease
-        }")
-    
-    local status_code=${response: -3}
-    local response_body=${response:0:${#response}-3}
-    
+        -d "{\"tag_name\": \"$tag\", \"name\": \"Release $tag\", \"body\": \"Auto-generated release\", \"draft\": false, \"prerelease\": false}")
+    status_code=${response: -3}
+    response_body=${response:0:${#response}-3}
     if [ "$status_code" -eq 201 ]; then
-        echo "$response_body" | grep -oP '"upload_url": "\K[^"]*'
+        echo "$response_body" | grep -oP '"upload_url":\s*"\K[^"{]+'
+        return 0
     else
-        echo "错误: 创建 release 失败 (HTTP $status_code)"
-        echo "响应: $response_body"
+        echo "错误: 创建 release 失败 (HTTP $status_code)" >&2
+        echo "$response_body" >&2
         return 1
     fi
 }
 
 github_upload() {
-    local upload_url="$1"
-    local file_path="$2"
-    
-    local file_name=$(basename "$file_path")
-    local file_size=$(stat -c%s "$file_path")
-    
-    # 准备上传 URL
-    upload_url="${upload_url%\{*}?name=$file_name"
-    
-    echo "上传: $file_name ($((file_size/1024/1024))MB)"
-    
-    local response=$(curl -s -w "%{http_code}" -X POST "$upload_url" \
+    base_url="$1"
+    file_name=$(basename "$2")
+    local upload_url="${base_url%%\{*}?name=$file_name"
+    response=$(curl -s -w "%{http_code}" -X POST "$upload_url" \
         -H "Authorization: token $GITHUB_TOKEN" \
         -H "Content-Type: application/octet-stream" \
         -H "Accept: application/vnd.github.v3+json" \
-        --data-binary @"$file_path")
-    
-    local status_code=${response: -3}
-    local response_body=${response:0:${#response}-3}
-    
+        --data-binary @"$2")
+    status_code=${response: -3}
+    response_body=${response:0:${#response}-3}
     if [ "$status_code" -eq 201 ]; then
-        echo "✓ 上传成功: $file_name"
+        echo "上传成功: $upload_url"
+        return 0
     else
-        echo "❌ 上传失败: $file_name (HTTP $status_code)"
-        echo "响应: $response_body"
+        echo "上传失败: $upload_url (HTTP $status_code)" >&2
+        echo "$response_body" >&2
         return 1
     fi
 }
@@ -213,13 +190,13 @@ github() {
         exit 1
     fi
 
-    echo "开始发布到 GitHub Release"
+    echo "GitHub Release"
     echo "仓库: $REPO"
     echo "版本: $TAG"
     echo "资源目录: $ASSET_DIR"
+    echo "资源文件数: $(find "$ASSET_DIR" -maxdepth 1 -type f | wc -l)"
     echo "----------------------------------------"
-    # 创建 release
-    echo "创建 release..."
+    echo "创建 Release..."
     local upload_url
     local rc
     upload_url=$(github_create_release "$REPO" "$TAG")
@@ -233,17 +210,24 @@ github() {
     # 上传文件
     echo "开始上传资源文件..."
     uploaded_count=0
-    for file in "$ASSET_DIR"/*; do
-        if [ -f "$file" ]; then
-            if github_upload "$upload_url" "$file"; then
-                ((uploaded_count++))
+    shopt -s nullglob dotglob
+    files=("$ASSET_DIR"/*)
+    if [ ${#files[@]} -eq 0 ]; then
+        echo "警告: 资源目录为空，无文件可上传。"
+    else
+        for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+                github_upload "$upload_url" "$file"
+                if [ $? -eq 0 ]; then
+                    ((uploaded_count++))
+                fi
             fi
-        fi
-    done
+        done
+    fi
+    shopt -u nullglob dotglob
 
     echo "----------------------------------------"
-    echo "✅ 发布完成！"
-    echo "上传文件数: $uploaded_count"
+    echo "完成上传文件数: $uploaded_count"
     echo "Release URL: https://github.com/$REPO/releases/tag/$TAG"
 }
 
