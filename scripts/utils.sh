@@ -142,3 +142,26 @@ clone_repository() {
         git clone --depth=1 "${repo_url}" "${src_dir}"
     fi
 }
+
+checkout_ref() {
+    # 用法: checkout_git_ref <repo_path> <ref>
+    local repo_path="$1"
+    local ref="$2"
+    if [ ! -d "$repo_path/.git" ]; then
+        echo "错误: $repo_path 不是一个 git 仓库" >&2
+        return 1
+    fi
+    pushd "$repo_path" >/dev/null || return 1
+    # 尝试 fetch，保证 tag/commit 可用
+    git fetch --all --tags --quiet
+    if git rev-parse --verify "$ref" >/dev/null 2>&1; then
+        git checkout --quiet "$ref"
+        echo "已切换到 $ref"
+        popd >/dev/null
+        return 0
+    else
+        echo "错误: 未找到分支、tag 或 commit: $ref" >&2
+        popd >/dev/null
+        return 2
+    fi
+}
