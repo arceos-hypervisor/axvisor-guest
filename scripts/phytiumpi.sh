@@ -49,7 +49,7 @@ build_linux() {
     make phytiumpi_desktop_defconfig
 
     info "开始编译: make"
-    make
+    make > /dev/null
     popd >/dev/null
     
     info "复制构建产物: $LINUX_SRC_DIR/output/images -> $LINUX_IMAGES_DIR"
