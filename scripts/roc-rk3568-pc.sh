@@ -9,16 +9,16 @@ BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
 source $SCRIPT_DIR/utils.sh
 
 # 仓库 URL
-RK3568_LINUX_REPO_URL="https://gitee.com/phytium_embedded/phytium-pi-os.git"
-RK3568_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
+ROC_RK3568_LINUX_REPO_URL=""
+ROC_RK3568_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
 
 # 目录配置
-LINUX_SRC_DIR="${BUILD_DIR}/phytium-pi-os"
+LINUX_SRC_DIR="${BUILD_DIR}/roc-rk3588-pc"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
-LINUX_PATCH_DIR="${WORK_ROOT}/patches/phytiumpi"
+LINUX_PATCH_DIR="${WORK_ROOT}/patches/roc-rk3588-pc"
 ARCEOS_PATCH_DIR="${WORK_ROOT}/patches/arceos"
-LINUX_IMAGES_DIR="${WORK_ROOT}/IMAGES/phytiumpi/linux"
-ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/phytiumpi/arceos"
+LINUX_IMAGES_DIR="${WORK_ROOT}/IMAGES/roc-rk3588-pc/linux"
+ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/roc-rk3588-pc/arceos"
 
 # 输出帮助信息
 usage() {
@@ -31,8 +31,8 @@ usage() {
     printf '  arceos            仅构建 ArceOS 系统\n'
     printf '  help, -h, --help  显示此帮助信息\n'
     printf '\n环境变量:\n'
-    printf '  RK3568_LINUX_REPO_URL    Linux 仓库 URL\n'
-    printf '  RK3568_ARCEOS_REPO_URL   ArceOS 仓库 URL\n'
+    printf '  ROC_RK3568_LINUX_REPO_URL    Linux 仓库 URL\n'
+    printf '  ROC_RK3568_ARCEOS_REPO_URL   ArceOS 仓库 URL\n'
     printf '\n构建流程:\n'
     printf '  1. 克隆仓库 (如果不存在)\n'
     printf '  2. 应用补丁 (幂等操作)\n'
@@ -44,28 +44,24 @@ usage() {
 }
 
 build_linux() {
-    pushd "$LINUX_SRC_DIR" >/dev/null
-    info "配置构建: make phytiumpi_desktop_defconfig"
-    make phytiumpi_desktop_defconfig
+    # 由于瑞芯微的 Linux SDK 是由 repo 管理的大型仓库，且各厂家也不提供在线仓库（通常只给了压缩包），因此这里我们 SSH 登录准备好的 SDK 服务器进行构建
+    REMOTE_HOST="10.0.0.110"
+    REMOTE_DIR="/runner/firefly_rk3568_sdk"
+    REMOTE_IMAGES_DIR="output/RK3568-FIREFLY-ROC-PC-SE/latest/IMAGES"
 
-    info "开始编译: make"
-    make
-    popd >/dev/null
-    
-    info "复制构建产物: $LINUX_SRC_DIR/output/images -> $LINUX_IMAGES_DIR"
-    mkdir -p "$LINUX_IMAGES_DIR"
-    if ! cp -a "$LINUX_SRC_DIR/output/images/* $LINUX_IMAGES_DIR/"; then
-        die "复制构建产物失败"
-    fi
+    info "通过 SSH 登录远程服务器构建..."
+    ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh firefly_rk3568_roc-rk3568-pc_ubuntu_defconfig && ./build.sh"
+
+    info "复制构建产物: -> $LINUX_IMAGES_DIR"
+    mkdir -p "${LINUX_IMAGES_DIR}"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/boot.img" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/parameter.txt" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/../kernel/rk3568-firefly-roc-pc-se.dtb" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/"
 }
 
 linux() {
-    info "克隆 Linux 源码仓库 $RK3568_LINUX_REPO_URL"
-    clone_repository "$RK3568_LINUX_REPO_URL" "$LINUX_SRC_DIR"
-    
-    info "应用补丁..."
-    apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
-
     info "开始构建 Linux 系统..."
     build_linux "$@"
 }
@@ -85,8 +81,8 @@ build_arceos() {
 }
 
 arceos() {
-    info "克隆 ArceOS 源码仓库 $RK3568_ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
-    clone_repository "$RK3568_ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
+    info "克隆 ArceOS 源码仓库 $ROC_RK3568_ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
+    clone_repository "$ROC_RK3568_ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
 
     info "应用补丁..."
     apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
