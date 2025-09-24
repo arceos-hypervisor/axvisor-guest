@@ -44,43 +44,72 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             script_path="${SCRIPTS_DIR}/phytiumpi.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
-            exec "$script_path" "$@" 
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "all"
+            else
+                exec "$script_path" "$@"
+            fi
             ;;
         roc-rk3568-pc)
             script_path="${SCRIPTS_DIR}/roc-rk3568-pc.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
-            exec "$script_path" "$@"
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "all"
+            else
+                exec "$script_path" "$@"
+            fi
             ;;
         tac-e400-plc)
             script_path="${SCRIPTS_DIR}/tac-e400-plc.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
-            exec "$script_path" "$@"
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "all"
+            else
+                exec "$script_path" "$@"
+            fi
             ;;
         qemu-aarch64)
             script_path="${SCRIPTS_DIR}/qemu.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
-            exec "$script_path" aarch64 "$@"
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "aarch64" "all"
+            else
+                exec "$script_path" "$@"
+            fi
             ;;
         qemu-x86_64)
             script_path="${SCRIPTS_DIR}/qemu.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
             exec "$script_path" x86_64 "$@"
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "x86_64" "all"
+            else
+                exec "$script_path" "$@"
+            fi
             ;;
         qemu-riscv64)
             script_path="${SCRIPTS_DIR}/qemu.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
-            exec "$script_path" riscv64 "$@"
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "riscv64" "all"
+            else
+                exec "$script_path" "$@"
+            fi
             ;;
         release)
             script_path="${SCRIPTS_DIR}/release.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
-            exec "$script_path" "$@"
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "pack"
+            else
+                exec "$script_path" "$@"
+            fi
             ;;
         all)
             platforms=(phytiumpi roc-rk3568-pc tac-e400-plc qemu-aarch64 qemu-x86_64 qemu-riscv64)

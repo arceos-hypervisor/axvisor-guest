@@ -172,7 +172,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift 1 || true
     case "${cmd}" in
-        help|-h|--help)
+        ""|help|-h|--help)
             usage
             exit 0
             ;;
@@ -197,7 +197,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                     ;;
             esac
             ;;
-        "")
+        all)
             for arch in aarch64 riscv64 x86_64; do
                 ARCH="$arch"
                 info "=== 构建架构: $ARCH ==="

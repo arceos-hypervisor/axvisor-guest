@@ -103,7 +103,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift || true
     case "$cmd" in
-        -h|--help|help)
+        ""|-h|--help|help)
             usage
             exit 0
             ;;
@@ -113,7 +113,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         arceos)
             arceos "$@"
             ;;
-        all|"")
+        all)
             linux "$@"
 
             arceos "$@"

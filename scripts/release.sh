@@ -235,15 +235,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift || true
     case "$cmd" in
+        ""|-h|--help|help)
+            usage
+            exit 0
+            ;;
         pack)
             pack "$@"
             ;;
         github)
             github "$@"
-            ;;
-        -h|--help|help|"")
-            usage
-            exit 0
             ;;
         *)
             echo "Unknown command: $cmd" >&2
