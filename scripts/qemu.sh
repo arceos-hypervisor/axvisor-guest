@@ -21,27 +21,28 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/qemu/arceos"
 
 # 显示帮助信息
 usage() {
-    printf '%s\n' "QEMU Linux & ArceOS 构建工具"
-    printf '\n用法:\n'
+    printf '适用于 QEMU 的 Linux & ArceOS 构建脚本\n'
+    printf '\n'
+    printf '用法:\n'
     printf '  scripts/qemu.sh <命令> <系统> [options]\n'
     printf '  scripts/qemu.sh help | -h | --help\n'
-
-    printf '\n命令:\n'
-    printf '  aarch64               构建 Linux 和 ArceOS (默认)\n'
-    printf '  x86_64                仅构建 Linux 系统\n'
-    printf '  riscv64               仅构建 ArceOS 系统\n'
+    printf '\n'
+    printf '命令:\n'
+    printf '  aarch64               构建 AArch64 架构的系统\n'
+    printf '  x86_64                构建 x86_64 架构的系统\n'
+    printf '  riscv64               构建 RISC-V 架构的系统\n'
     printf '  help, -h, --help      显示此帮助信息\n'
-
-    printf '\n系统:\n'
-    printf '  linux        构建 Linux 系统\n'
-    printf '  arceos       构建 ArceOS 系统\n'
-    printf '  all          构建所有系统 (默认)\n'
-
+    printf '\n'
+    printf '系统:\n'
+    printf '  linux                 构建 Linux 系统\n'
+    printf '  arceos                构建 ArceOS 系统\n'
+    printf '  all                   构建所有系统 (默认)\n'
+    printf '\n'
     printf '\n环境变量:\n'
     printf '  LINUX_REPO_URL        Linux 仓库地址\n'
     printf '  ARCEOS_REPO_URL       ArceOS 仓库地址\n'
-
-    printf '\n示例:\n'
+    printf '\n'
+    printf '示例:\n'
     printf '  scripts/qemu.sh aarch64 linux        # 构建 ARM64 Linux\n'
     printf '  scripts/qemu.sh x86_64 arceos        # 构建 x86_64 ArceOS\n'
     printf '  scripts/qemu.sh riscv64 all          # 构建 RISC-V 所有系统\n'

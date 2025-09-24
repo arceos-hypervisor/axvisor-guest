@@ -22,25 +22,24 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/phytiumpi/arceos"
 
 # 输出帮助信息
 usage() {
-    printf '%s\n' "${0} - Phytium Pi OS 构建助手"
-    printf '\n用法:\n'
-    printf '  %s [命令] [选项]\n' "$0"
-    printf '\n命令:\n'
+    printf '适用于飞腾派开发板的 Linux & ArceOS 构建脚本\n'
+    printf '\n'
+    printf '用法:\n'
+    printf '  scripts/phytiumpi.sh [命令] [选项]\n'
+    printf '\n'
+    printf '命令:\n'
     printf '  all               构建 Linux 和 ArceOS (默认)\n'
     printf '  linux             仅构建 Linux 系统\n'
     printf '  arceos            仅构建 ArceOS 系统\n'
     printf '  help, -h, --help  显示此帮助信息\n'
-    printf '\n环境变量:\n'
+    printf '\n'
+    printf '环境变量:\n'
     printf '  PHYTIUM_LINUX_REPO_URL    Linux 仓库 URL\n'
     printf '  PHYTIUM_ARCEOS_REPO_URL   ArceOS 仓库 URL\n'
-    printf '\n构建流程:\n'
-    printf '  1. 克隆仓库 (如果不存在)\n'
-    printf '  2. 应用补丁 (幂等操作)\n'
-    printf '  3. 配置和编译\n'
-    printf '  4. 复制构建产物到镜像目录\n'
-    printf '\n示例:\n'
-    printf '  %s                    # 构建全部\n' "$0"
-    printf '  %s linux              # 仅构建 Linux\n' "$0"
+    printf '\n'
+    printf '示例:\n'
+    printf '  scripts/phytiumpi.sh all                # 构建全部\n'
+    printf '  scripts/phytiumpi.sh linux              # 仅构建 Linux\n'
 }
 
 build_linux() {

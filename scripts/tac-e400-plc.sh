@@ -22,25 +22,24 @@ ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/tac-e400-plc/arceos"
 
 # 输出帮助信息
 usage() {
-    printf '%s\n' "${0} - TAC-E400 系列智能 PLC 产品系统构建助手"
-    printf '\n用法:\n'
-    printf '  %s [命令] [选项]\n' "$0"
-    printf '\n命令:\n'
+    printf '适用于 TAC-E400 系列智能 PLC 产品的 Linux & ArceOS 构建脚本\n'
+    printf '\n'
+    printf '用法:\n'
+    printf '  scriptstac-e400-plc.sh [命令] [选项]\n'
+    printf '\n'
+    printf '命令:\n'
     printf '  all               构建 Linux 和 ArceOS (默认)\n'
     printf '  linux             仅构建 Linux 系统\n'
     printf '  arceos            仅构建 ArceOS 系统\n'
     printf '  help, -h, --help  显示此帮助信息\n'
-    printf '\n环境变量:\n'
-    printf '  TAC_E400_LINUX_REPO_URL    Linux 仓库 URL\n'
-    printf '  TAC_E400_ARCEOS_REPO_URL   ArceOS 仓库 URL\n'
-    printf '\n构建流程:\n'
-    printf '  1. 克隆仓库 (如果不存在)\n'
-    printf '  2. 应用补丁\n'
-    printf '  3. 配置和编译\n'
-    printf '  4. 复制构建产物到镜像目录\n'
-    printf '\n示例:\n'
-    printf '  %s                    # 构建全部\n' "$0"
-    printf '  %s linux              # 仅构建 Linux\n' "$0"
+    printf '\n'
+    printf '环境变量:\n'
+    printf '  PHYTIUM_LINUX_REPO_URL    Linux 仓库 URL\n'
+    printf '  PHYTIUM_ARCEOS_REPO_URL   ArceOS 仓库 URL\n'
+    printf '\n'
+    printf '示例:\n'
+    printf '  scripts/tac-e400-plc.sh all                # 构建全部\n'
+    printf '  scripts/tac-e400-plc.sh linux              # 仅构建 Linux\n'
 }
 
 build_linux() {

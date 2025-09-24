@@ -14,10 +14,11 @@ ASSET_DIR="$RELEASE_DIR"
 
 usage() {
     echo "Usage: $0 pack [options]"
+    echo ""
     echo "Commands:"
     echo "  pack                        打包镜像文件"
     echo "  github                      发布 GitHub Release"
-    echo "  -h|--help|help              发布 GitHub Release"
+    echo "  -h|--help|help              显示此帮助信息"
     echo ""
     echo "Options for pack:"
     echo "  <input_dir>                 输入目录 (默认: $IMAGES_DIR)"
