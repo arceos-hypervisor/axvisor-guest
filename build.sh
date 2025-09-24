@@ -123,7 +123,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             fi
             ;;
         all)
-            platforms=(phytiumpi roc-rk3568-pc tac-e400-plc qemu-aarch64 qemu-x86_64 qemu-riscv64)
+            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc qemu-aarch64 qemu-x86_64 qemu-riscv64)
             for p in "${platforms[@]}"; do
                 echo "[ALL] Building: $p $*"
                 "$0" "$p" "$@" || { echo "[ERROR] $p build failed" >&2; exit 1; }
