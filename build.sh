@@ -12,6 +12,7 @@ usage() {
     printf '%s\n' "Commands:"
     printf '%s\n' "    phytiumpi            -> scripts/phytiumpi.sh"
     printf '%s\n' "    roc-rk3568-pc        -> scripts/roc-rk3568-pc.sh"
+    printf '%s\n' "    evm3588              -> scripts/evm3588.sh"
     printf '%s\n' "    tac-e400-plc         -> scripts/tac-e400-plc.sh"
     printf '%s\n' "    qemu-aarch64         -> scripts/qemu.sh aarch64"
     printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh x86_64"
@@ -52,6 +53,16 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         roc-rk3568-pc)
             script_path="${SCRIPTS_DIR}/roc-rk3568-pc.sh"
+            [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
+            chmod +x "$script_path" 2>/dev/null || true
+            if [ $# -eq 0 ]; then
+                exec "$script_path" "all"
+            else
+                exec "$script_path" "$@"
+            fi
+            ;;
+        evm3588)
+            script_path="${SCRIPTS_DIR}/evm3588.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
             if [ $# -eq 0 ]; then
