@@ -203,11 +203,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         all)
             for arch in aarch64 riscv64 x86_64; do
-                ARCH="$arch"
-                info "=== 构建架构: $ARCH ==="
-                linux "$@"
-
-                arceos "$@"
+                "$0" "$arch" "$@" || { echo "[ERROR] $p build failed" >&2; exit 1; }
             done
             ;;
         *)
