@@ -12,11 +12,11 @@ BUSYBOX_SRC_DIR="${BUILD_DIR}/busybox"
 BUSYBOX_PATCH_DIR="${WORK_ROOT}/patches/busybox"
 
 usage() {
-    printf '%s\n' '$0: generate a fs image containing BusyBox and basic device nodes.'
+    printf '%s\n' 'generate a fs image containing BusyBox and basic device nodes.'
     printf '%s\n' ''
     printf '%s\n' 'Usage:'
-    printf '%s\n' "  $0 <aarch64|riscv64|x86_64> --dir|-d <out_dir>"
-    printf '%s\n' "  $0 -h|--help|help"
+    printf '%s\n' "  scripts/mkfs.sh <aarch64|riscv64|x86_64> --dir|-d <out_dir>"
+    printf '%s\n' "  scripts/mkfs.sh -h|--help|help"
     printf '%s\n' ''
     printf '%s\n' 'Commands:'
     printf '%s\n' '  help            Show this help and exit'
