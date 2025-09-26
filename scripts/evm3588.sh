@@ -51,12 +51,15 @@ build_linux() {
     REMOTE_DIR="/runner/evm3588_linux_sdk_v1.0.3"
 
     info "通过 SSH 登录远程服务器构建..."
-    ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh cleanall  && ./build.sh BoardConfig-evm3588.mk && ./build.sh kernel"
+    ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh"
 
     info "复制构建产物: -> $LINUX_IMAGES_DIR"
     mkdir -p "${LINUX_IMAGES_DIR}"
-    scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/boot.img" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/parameter.txt" "${LINUX_IMAGES_DIR}/"
     scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/"
+    scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/"
 }
 
 linux() {
