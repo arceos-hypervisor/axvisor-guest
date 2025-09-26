@@ -58,45 +58,18 @@ create_init() {
         '#!/bin/sh' \
         'export PATH=/bin:/sbin:/usr/bin:/usr/sbin' \
         '' \
-        '# Ensure directories exist for busybox symlinks' \
-        'mkdir -p /sbin /usr/bin /usr/sbin' \
-        '' \
-        '# Install busybox applet symlinks (ignore errors if already exist)' \
-        '/bin/busybox --install -s' \
-        '' \
-        '# Use explicit busybox invocation for early mounts (in case mount symlink missing)' \
-        '/bin/busybox mount -t proc proc /proc || echo "warn: proc mount failed"' \
-        '/bin/busybox mount -t sysfs sysfs /sys || echo "warn: sysfs mount failed"' \
-        '/bin/busybox mount -t devtmpfs devtmpfs /dev 2>/dev/null || echo "info: devtmpfs not available"' \
-        'mkdir -p /dev/pts' \
-        '/bin/busybox mount -t devpts devpts /dev/pts 2>/dev/null || true' \
-        '' \
-        'choose_tty() {' \
-        '    for d in /dev/ttyS0 /dev/console /dev/tty; do' \
-        '        [ -c "$d" ] && echo "$d" && return 0' \
-        '    done' \
-        '    return 1' \
-        '}' \
-        '' \
-        'TTY_DEV=$(choose_tty || echo /dev/console)' \
-        'exec <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
-        '' \
-        'echo' \
-        'echo "Initramfs test OK! Starting interactive shell..."' \
-        'echo' \
-        '' \
-        '# Start interactive shell with job control if possible' \
-        'if command -v setsid >/dev/null 2>&1; then' \
-        '    # Use setsid -c if busybox supports it, else fall back' \
-        '    setsid -c /bin/sh -i 2>/dev/null || setsid /bin/sh -i 2>/dev/null || exec /bin/sh -i' \
-        'else' \
-        '    exec /bin/sh -i' \
+        'if [ -x /bin/busybox ]; then' \
+        '    /bin/busybox --install -s >/dev/null 2>&1' \
         'fi' \
         '' \
-        'echo' \
-        'echo "[init] reached end of /init unexpectedly; sleeping 10s (will then exit to trigger panic)" >&2' \
-        'sleep 10' \
-        'exit 1' \
+        '/bin/busybox mkdir -p /proc /sys /dev /dev/pts' \
+        '/bin/busybox mount -t proc proc /proc >/dev/null 2>&1' \
+        '/bin/busybox mount -t sysfs sysfs /sys >/dev/null 2>&1' \
+        '/bin/busybox mount -t devtmpfs devtmpfs /dev >/dev/null 2>&1 || true' \
+        '/bin/busybox mount -t devpts devpts /dev/pts >/dev/null 2>&1 || true' \
+        '' \
+        'echo "test pass!"' \
+        'exec /bin/sh -i' \
         > init
     chmod +x init
 }
@@ -123,7 +96,6 @@ pack_fs() {
     '
     # 3. 安装 busybox（如果 busybox 是动态链接的，复制所需的共享库） 并创建必要的符号链接
     cp "$BUSYBOX_SRC_DIR/busybox" bin/
-    [[ -e bin/sh ]] || ln -s busybox bin/sh
     if command -v ldd >/dev/null 2>&1; then
         ldd_output="$(ldd "$BUSYBOX_SRC_DIR/busybox" 2>&1 || true)"
         if ! printf '%s' "$ldd_output" | grep -q "not a dynamic executable"; then
@@ -136,8 +108,10 @@ pack_fs() {
             done
         fi
     fi
+    [[ -e bin/sh ]] || ln -s busybox bin/sh
     # 4. 创建 init 脚本
     create_init
+    [[ -e bin/init ]] || ln -s ../init bin/init
 
     # 5. 打包 ramfs
     local abs_out="$OUTPUT_DIR/initramfs.cpio.gz"
@@ -160,8 +134,14 @@ pack_fs() {
     find . -type d | while read -r d; do
         debugfs -w -R "mkdir ${d#.}" "$img_out" >/dev/null 2>&1
     done
+    # 写入普通文件
     find . -type f | while read -r f; do
         debugfs -w -R "write $f ${f#.}" "$img_out" >/dev/null 2>&1
+    done
+    # 写入软链接
+    find . -type l | while read -r lnk; do
+        target=$(readlink "$lnk")
+        debugfs -w -R "symlink ${lnk#.} $target" "$img_out" >/dev/null 2>&1
     done
     echo "rootfs.img created: $img_out"
     du -h "$img_out" | awk '{print "Size: "$1}'
