@@ -66,13 +66,18 @@ create_init() {
         '[ -c /dev/ttyAMA0 ] && TTY_DEV=/dev/ttyAMA0' \
         '[ -c /dev/ttyS0 ] && TTY_DEV=/dev/ttyS0' \
         '' \
+        'if [ ! -w "$TTY_DEV" ]; then' \
+        '    echo "[ERROR] TTY_DEV ($TTY_DEV) is not writable. Falling back to /dev/console."' \
+        '    TTY_DEV=/dev/console' \
+        'fi' \
+        '' \
         '/bin/busybox mkdir -p /proc /sys /dev /dev/pts' \
         '/bin/busybox mount -t proc proc /proc >/dev/null 2>&1' \
         '/bin/busybox mount -t sysfs sysfs /sys >/dev/null 2>&1' \
         '/bin/busybox mount -t devtmpfs devtmpfs /dev >/dev/null 2>&1 || true' \
         '/bin/busybox mount -t devpts devpts /dev/pts >/dev/null 2>&1 || true' \
         '' \
-        'echo "test pass!"' \
+        'echo "test pass!" > "$TTY_DEV" 2>/dev/null || echo "test pass!"' \
         'if command -v cttyhack >/dev/null 2>&1; then' \
         '    exec /bin/busybox cttyhack /bin/sh -i <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
         'elif command -v setsid >/dev/null 2>&1; then' \
