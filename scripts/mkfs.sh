@@ -12,7 +12,7 @@ BUSYBOX_SRC_DIR="${BUILD_DIR}/busybox"
 BUSYBOX_PATCH_DIR="${WORK_ROOT}/patches/busybox"
 
 usage() {
-    printf '%s\n' 'generate a fs image containing BusyBox and basic device nodes.'
+    printf '%s\n' 'Generate a filesystem image containing BusyBox and basic device nodes.'
     printf '%s\n' ''
     printf '%s\n' 'Usage:'
     printf '%s\n' "  scripts/mkfs.sh <aarch64|riscv64|x86_64> --dir|-d <out_dir>"
@@ -20,9 +20,9 @@ usage() {
     printf '%s\n' ''
     printf '%s\n' 'Commands:'
     printf '%s\n' '  help            Show this help and exit'
-    printf '%s\n' '  aarch64         Build minimal fs for aarch64 (cross-compile busybox, pack images)'
-    printf '%s\n' '  riscv64         Build minimal fs for riscv64 (cross-compile busybox, pack images)'
-    printf '%s\n' '  x86_64          Build minimal fs for x86_64 (native busybox build, pack images)'
+    printf '%s\n' '  aarch64         Build minimal filesystem for aarch64 (cross-compile BusyBox, pack images)'
+    printf '%s\n' '  riscv64         Build minimal filesystem for riscv64 (cross-compile BusyBox, pack images)'
+    printf '%s\n' '  x86_64          Build minimal filesystem for x86_64 (native BusyBox build, pack images)'
     printf '%s\n' ''
     printf '%s\n' 'Environment:'
     printf '%s\n' "  OUT_DIR         Base output directory"
@@ -40,13 +40,13 @@ build_busybox() {
         cross="${ARCH}-linux-gnu-"
     fi
     # pushd "$BUSYBOX_SRC_DIR" >/dev/null
-    # info "清理: make distclean"
+    # info "Cleaning: make distclean"
     # make distclean
 
-    # info "配置: make make defconfig"
+    # info "Configuring: make defconfig"
     # make defconfig
 
-    # info "构建: make -j$(nproc) CROSS_COMPILE=$cross"
+    # info "Building: make -j$(nproc) CROSS_COMPILE=$cross"
     # sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
     # sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
     # make -j$(nproc) CROSS_COMPILE="$cross"
@@ -85,7 +85,7 @@ create_init() {
 }
 
 pack_fs() {
-    # 0. 准备工作目录
+    # 0. Prepare working directory
     OUTPUT_DIR="${OUT_DIR:-${WORK_ROOT}/IMAGES/qemu/linux/${ARCH}}"
     mkdir -p "$OUTPUT_DIR"
     TMP_DIR=$(mktemp -d)
@@ -94,9 +94,9 @@ pack_fs() {
     cd "$TMP_DIR"
     echo "Creating minimal ramfs in $TMP_DIR"
 
-    # 1. 创建必要的目录结构
+    # 1. Create necessary directory structure
     mkdir -p bin sbin usr/bin usr/sbin dev dev/pts etc proc sys
-    # 2. 使用 fakeroot 创建设备节点
+    # 2. Use fakeroot to create device nodes
     fakeroot bash -c '
         mknod dev/console c 5 1 || true
         mknod dev/null c 1 3 || true
@@ -104,7 +104,7 @@ pack_fs() {
         mknod dev/tty c 5 0 || true
         mknod dev/ttyS0 c 4 64 || true
     '
-    # 3. 安装 busybox（如果 busybox 是动态链接的，复制所需的共享库） 并创建必要的符号链接
+    # 3. Install busybox (if dynamically linked, copy required shared libraries) and create necessary symlinks
     cp "$BUSYBOX_SRC_DIR/busybox" bin/
     if command -v ldd >/dev/null 2>&1; then
         ldd_output="$(ldd "$BUSYBOX_SRC_DIR/busybox" 2>&1 || true)"
@@ -119,11 +119,11 @@ pack_fs() {
         fi
     fi
     [[ -e bin/sh ]] || ln -s busybox bin/sh
-    # 4. 创建 init 脚本
+    # 4. Create init script
     create_init
     [[ -e bin/init ]] || ln -s ../init bin/init
 
-    # 5. 打包 ramfs
+    # 5. Pack ramfs
     local abs_out="$OUTPUT_DIR/initramfs.cpio.gz"
     echo "Packing ramfs -> $abs_out"
     chmod 755 . || true
@@ -131,7 +131,7 @@ pack_fs() {
     echo "Minimal ramfs created: $abs_out"
     du -h "$abs_out" | awk '{print "Size: "$1}'
 
-    # 6. 打包 ext4 rootfs.img
+    # 6. Pack ext4 rootfs.img
     local img_out="$OUTPUT_DIR/rootfs.img"
     local size_mb=32
     echo "Packing ext4 rootfs (debugfs write) -> $img_out"
@@ -144,11 +144,11 @@ pack_fs() {
     find . -type d | while read -r d; do
         debugfs -w -R "mkdir ${d#.}" "$img_out" >/dev/null 2>&1
     done
-    # 写入普通文件
+    # Write regular files
     find . -type f | while read -r f; do
         debugfs -w -R "write $f ${f#.}" "$img_out" >/dev/null 2>&1
     done
-    # 写入软链接
+    # Write symlinks
     find . -type l | while read -r lnk; do
         target=$(readlink "$lnk")
         debugfs -w -R "symlink ${lnk#.} $target" "$img_out" >/dev/null 2>&1
@@ -172,16 +172,16 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 OUT_DIR="$2"
                 shift 2
             fi
-            info "克隆 busybox 源码仓库 $BUSYBOX_REPO_URL -> $BUSYBOX_SRC_DIR"
+            info "Cloning busybox source repository $BUSYBOX_REPO_URL -> $BUSYBOX_SRC_DIR"
             clone_repository "$BUSYBOX_REPO_URL" "$BUSYBOX_SRC_DIR"
 
-            info "应用补丁..."
+            info "Applying patches..."
             apply_patches "$BUSYBOX_PATCH_DIR" "$BUSYBOX_SRC_DIR"
 
-            info "开始构建 busybox..."
+            info "Starting to build busybox..."
             build_busybox "$@"
 
-            info "打包文件系统..."
+            info "Packing filesystem..."
             pack_fs
             ;;
         *)

@@ -32,17 +32,17 @@ usage() {
 }
 
 pack_images() {
-    # 打包 IMAGES 下所有二级子文件夹为 tar.gz
-    # 例如 IMAGES/phytiumpi/arceos -> phytiumpi_arceos.tar.gz
+    # Package all second-level subfolders under IMAGES into tar.gz
+    # For example, IMAGES/phytiumpi/arceos -> phytiumpi_arceos.tar.gz
     mkdir -p "$RELEASE_DIR"
     cd "$IMAGES_DIR"
-    # 遍历 IMAGES 下所有二级子目录，qemu 为三级，其余为二级，打包到 release 目录
+    # Traverse all second-level subdirectories under IMAGES; qemu is three-level, others are two-level, package into the release directory
     count_packed=0
     count_skipped=0
     for top in *; do
         [[ -d "$top" ]] || continue
         if [[ "$(basename "$top")" == "qemu" ]]; then
-            # qemu: 三级目录
+            # qemu: three-level directory
             for mid in "$top"/*; do
                 [[ -d "$mid" ]] || continue
                 for leaf in "$mid"/*; do
@@ -56,13 +56,13 @@ pack_images() {
                         tar -czf "$out_path" -C "$leaf" .
                         count_packed=$((count_packed+1))
                     else
-                        echo "[SKIP] 空目录 $rel_path"
+                        echo "[SKIP] Empty directory $rel_path"
                         count_skipped=$((count_skipped+1))
                     fi
                 done
             done
         else
-            # 其他: 二级目录
+            # Others: two-level directory
             for leaf in "$top"/*; do
                 [[ -d "$leaf" ]] || continue
                 rel_path="${leaf#$IMAGES_DIR/}"
@@ -74,13 +74,13 @@ pack_images() {
                     tar -czf "$out_path" -C "$leaf" .
                     count_packed=$((count_packed+1))
                 else
-                    echo "[SKIP] 空目录 $rel_path"
+                    echo "[SKIP] Empty directory $rel_path"
                     count_skipped=$((count_skipped+1))
                 fi
             done
         fi
     done
-    echo "打包完成：$count_packed 个目录，跳过 $count_skipped 个空目录"
+    echo "Packaging completed: $count_packed directories, skipped $count_skipped empty directories"
     cd - >/dev/null
 }
 
@@ -102,11 +102,11 @@ pack() {
     pack_parse_args "$@"
 
     if [ ! -d "$IMAGES_DIR" ]; then
-        echo "错误: 输入目录不存在: $IMAGES_DIR"
+        echo "Error: Input directory does not exist: $IMAGES_DIR"
         exit 1
     fi
 
-    echo "开始打包 $IMAGES_DIR 目录下的系统镜像..."
+    echo "Starting to package system images under $IMAGES_DIR directory..."
     pack_images
 }
 
@@ -141,7 +141,7 @@ github_create_release() {
         echo "$response_body" | grep -oP '"upload_url":\s*"\K[^"{]+'
         return 0
     else
-        echo "错误: 创建 release 失败 (HTTP $status_code)" >&2
+        echo "Error: Failed to create release (HTTP $status_code)" >&2
         echo "$response_body" >&2
         return 1
     fi
@@ -159,10 +159,10 @@ github_upload() {
     status_code=${response: -3}
     response_body=${response:0:${#response}-3}
     if [ "$status_code" -eq 201 ]; then
-        echo "上传成功: $upload_url"
+        echo "Upload successful: $upload_url"
         return 0
     else
-        echo "上传失败: $upload_url (HTTP $status_code)" >&2
+        echo "Upload failed: $upload_url (HTTP $status_code)" >&2
         echo "$response_body" >&2
         return 1
     fi
@@ -172,49 +172,49 @@ github() {
     github_parse_args "$@"
 
     if [ -z "$GITHUB_TOKEN" ]; then
-        echo "错误: 需要设置 GITHUB_TOKEN 环境变量"
+        echo "Error: GITHUB_TOKEN environment variable must be set"
         exit 1
     fi
     
     if [ -z "$REPO" ]; then
-        echo "错误: 需要设置 REPO 环境变量 (格式: owner/repo)"
+        echo "Error: REPO environment variable must be set (format: owner/repo)"
         exit 1
     fi
     
     if [ -z "$TAG" ]; then
-        echo "错误: 需要设置 TAG 环境变量"
+        echo "Error: TAG environment variable must be set"
         exit 1
     fi
     
     if [ ! -d "$ASSET_DIR" ]; then
-        echo "错误: 资源目录不存在: $ASSET_DIR"
+        echo "Error: Asset directory does not exist: $ASSET_DIR"
         exit 1
     fi
 
     echo "GitHub Release"
-    echo "仓库: $REPO"
-    echo "版本: $TAG"
-    echo "资源目录: $ASSET_DIR"
-    echo "资源文件数: $(find "$ASSET_DIR" -maxdepth 1 -type f | wc -l)"
+    echo "Repository: $REPO"
+    echo "Version: $TAG"
+    echo "Asset Directory: $ASSET_DIR"
+    echo "Number of Asset Files: $(find "$ASSET_DIR" -maxdepth 1 -type f | wc -l)"
     echo "----------------------------------------"
-    echo "创建 Release..."
+    echo "Creating Release..."
     local upload_url
     local rc
     upload_url=$(github_create_release "$REPO" "$TAG")
     rc=$?
     if [ $rc -ne 0 ] || [ -z "$upload_url" ]; then
-        echo "创建 release 失败"
+        echo "Failed to create release"
         exit 1
     fi
-    echo "Release 创建成功"
+    echo "Release created successfully"
     echo "----------------------------------------"
-    # 上传文件
-    echo "开始上传资源文件..."
+    # Upload files
+    echo "Starting to upload asset files..."
     uploaded_count=0
     shopt -s nullglob dotglob
     files=("$ASSET_DIR"/*)
     if [ ${#files[@]} -eq 0 ]; then
-        echo "警告: 资源目录为空，无文件可上传。"
+        echo "Warning: Asset directory is empty, no files to upload."
     else
         for file in "${files[@]}"; do
             if [ -f "$file" ]; then
@@ -228,7 +228,7 @@ github() {
     shopt -u nullglob dotglob
 
     echo "----------------------------------------"
-    echo "完成上传文件数: $uploaded_count"
+    echo "Number of files uploaded: $uploaded_count"
     echo "Release URL: https://github.com/$REPO/releases/tag/$TAG"
 }
 

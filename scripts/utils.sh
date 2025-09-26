@@ -9,38 +9,38 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P
 WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
 BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
 
-# 日志文件
-LOG_FILE="${BUILD_DIR}/log.log"  # 默认日志文件
+# Log file
+LOG_FILE="${BUILD_DIR}/log.log"  # Default log file
 
-# 日志函数
+# Logging function
 log() {
     local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
     printf "[%s] %s\n" "$timestamp" "$*" >&2
     echo "[$timestamp] $*" >> "${LOG_FILE}"
 }
 
-# 详细日志 (仅在 VERBOSE=1 时输出)
+# Verbose logging (only outputs when VERBOSE=1)
 vlog() {
     [[ $VERBOSE -eq 1 ]] && log "$@" || true
 }
 
-# 错误处理
+# Error handling
 die() {
-    log "❌ 错误: $1"
+    log "❌ Error: $1"
     exit "${2:-1}"
 }
 
-# 成功消息
+# Success message
 success() {
     log "✅ $1"
 }
 
-# 信息消息
+# Info message
 info() {
     log "ℹ️  $1"
 }
 
-# 警告消息
+# Warning message
 warn() {
     log "⚠️  $1"
 }
@@ -50,12 +50,12 @@ apply_patches() {
     local src_dir="$2"
 
     if [[ -z "$patch_dir" || -z "$src_dir" ]]; then
-        echo "[ERROR] apply_patches: patch_dir 和 src_dir 不能为空！" >&2
+        echo "[ERROR] apply_patches: patch_dir and src_dir cannot be empty!" >&2
         return 1
     fi
 
     if [[ -z "${patch_dir}" || -z "${src_dir}" ]]; then
-        echo "用法: apply_patches <patch_dir> <src_dir>" >&2
+        echo "Usage: apply_patches <patch_dir> <src_dir>" >&2
         return 1
     fi
     
@@ -131,7 +131,7 @@ clone_repository() {
     local src_dir="$2"
 
     if [[ -z "$repo_url" || -z "$src_dir" ]]; then
-        echo "[ERROR] clone_repository: repo_url 和 src_dir 不能为空！" >&2
+        echo "[ERROR] clone_repository: repo_url and src_dir cannot be empty!" >&2
         return 1
     fi
 
@@ -144,23 +144,23 @@ clone_repository() {
 }
 
 checkout_ref() {
-    # 用法: checkout_git_ref <repo_path> <ref>
+    # Usage: checkout_git_ref <repo_path> <ref>
     local repo_path="$1"
     local ref="$2"
     if [ ! -d "$repo_path/.git" ]; then
-        echo "错误: $repo_path 不是一个 git 仓库" >&2
+        echo "Error: $repo_path is not a git repository" >&2
         return 1
     fi
     pushd "$repo_path" >/dev/null || return 1
-    # 尝试 fetch，保证 tag/commit 可用
+    # Attempt fetch to ensure tag/commit is available
     git fetch --all --tags --quiet
     if git rev-parse --verify "$ref" >/dev/null 2>&1; then
         git checkout --quiet "$ref"
-        echo "已切换到 $ref"
+        echo "Switched to $ref"
         popd >/dev/null
         return 0
     else
-        echo "错误: 未找到分支、tag 或 commit: $ref" >&2
+        echo "Error: Branch, tag, or commit not found: $ref" >&2
         popd >/dev/null
         return 2
     fi
