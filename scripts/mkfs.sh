@@ -39,18 +39,18 @@ build_busybox() {
     else
         cross="${ARCH}-linux-gnu-"
     fi
-    # pushd "$BUSYBOX_SRC_DIR" >/dev/null
-    # info "Cleaning: make distclean"
-    # make distclean
+    pushd "$BUSYBOX_SRC_DIR" >/dev/null
+    info "Cleaning: make distclean"
+    make distclean
 
-    # info "Configuring: make defconfig"
-    # make defconfig
+    info "Configuring: make defconfig"
+    make defconfig
 
-    # info "Building: make -j$(nproc) CROSS_COMPILE=$cross"
-    # sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
-    # sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
-    # make -j$(nproc) CROSS_COMPILE="$cross"
-    # popd >/dev/null
+    info "Building: make -j$(nproc) CROSS_COMPILE=$cross"
+    sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+    sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
+    make -j$(nproc) CROSS_COMPILE="$cross"
+    popd >/dev/null
 }
 
 create_init() {
