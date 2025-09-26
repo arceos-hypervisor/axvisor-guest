@@ -25,7 +25,7 @@ python3 http_server.py
 
 1. 安装依赖：
 	```bash
-	sudo apt install flex bison libelf-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-riscv64-linux-gnu g++-riscv64-linux-gnu bc fakeroot coreutils cpio gzip debootstrap binfmt-support debian-archive-keyring eatmydata file rsync
+	sudo apt install flex bison libelf-dev libssl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-riscv64-linux-gnu g++-riscv64-linux-gnu bc fakeroot coreutils cpio gzip debootstrap binfmt-support debian-archive-keyring eatmydata file rsync
 	```
 2. 赋予构建脚本执行权限：
 	```bash
