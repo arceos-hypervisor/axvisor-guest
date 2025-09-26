@@ -24,7 +24,7 @@ usage() {
     printf '%s\n' "OS:"
     printf '%s\n' "    linux                build linux kernel"
     printf '%s\n' "    arceos               build ArceOS"
-    printf '%s\n' "    all|""               build all supported OSes, if not specified"
+    printf '%s\n' "    all|''               build all supported OSes, if not specified"
     printf '%s\n' "    clean                Clean build output artifacts"
     printf '%s\n' ""
     printf '%s\n' "Options:"
