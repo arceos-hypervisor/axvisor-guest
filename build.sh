@@ -92,7 +92,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             if [ $# -eq 0 ]; then
                 exec "$script_path" "aarch64" "all"
             else
-                exec "$script_path" "$@"
+                exec "$script_path" "aarch64" "$@"
             fi
             ;;
         qemu-x86_64)
@@ -103,7 +103,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             if [ $# -eq 0 ]; then
                 exec "$script_path" "x86_64" "all"
             else
-                exec "$script_path" "$@"
+                exec "$script_path" "aarch64" "$@"
             fi
             ;;
         qemu-riscv64)
@@ -113,7 +113,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             if [ $# -eq 0 ]; then
                 exec "$script_path" "riscv64" "all"
             else
-                exec "$script_path" "$@"
+                exec "$script_path" "aarch64" "$@"
             fi
             ;;
         release)
