@@ -39,18 +39,18 @@ build_busybox() {
     else
         cross="${ARCH}-linux-gnu-"
     fi
-    pushd "$BUSYBOX_SRC_DIR" >/dev/null
-    info "清理: make distclean"
-    make distclean
+    # pushd "$BUSYBOX_SRC_DIR" >/dev/null
+    # info "清理: make distclean"
+    # make distclean
 
-    info "配置: make make defconfig"
-    make defconfig
+    # info "配置: make make defconfig"
+    # make defconfig
 
-    info "构建: make -j$(nproc) CROSS_COMPILE=$cross"
-    sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
-    sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
-    make -j$(nproc) CROSS_COMPILE="$cross"
-    popd >/dev/null
+    # info "构建: make -j$(nproc) CROSS_COMPILE=$cross"
+    # sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+    # sed -i 's/^CONFIG_TC=y$/# CONFIG_TC is not set/' .config
+    # make -j$(nproc) CROSS_COMPILE="$cross"
+    # popd >/dev/null
 }
 
 create_init() {
@@ -62,6 +62,10 @@ create_init() {
         '    /bin/busybox --install -s >/dev/null 2>&1' \
         'fi' \
         '' \
+        'TTY_DEV=/dev/console' \
+        '[ -c /dev/ttyAMA0 ] && TTY_DEV=/dev/ttyAMA0' \
+        '[ -c /dev/ttyS0 ] && TTY_DEV=/dev/ttyS0' \
+        '' \
         '/bin/busybox mkdir -p /proc /sys /dev /dev/pts' \
         '/bin/busybox mount -t proc proc /proc >/dev/null 2>&1' \
         '/bin/busybox mount -t sysfs sysfs /sys >/dev/null 2>&1' \
@@ -69,7 +73,13 @@ create_init() {
         '/bin/busybox mount -t devpts devpts /dev/pts >/dev/null 2>&1 || true' \
         '' \
         'echo "test pass!"' \
-        'exec /bin/sh -i' \
+        'if command -v cttyhack >/dev/null 2>&1; then' \
+        '    exec /bin/busybox cttyhack /bin/sh -i <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
+        'elif command -v setsid >/dev/null 2>&1; then' \
+        '    exec /bin/busybox setsid /bin/sh -i <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
+        'else' \
+        '    exec /bin/sh -i <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
+        'fi' \
         > init
     chmod +x init
 }
