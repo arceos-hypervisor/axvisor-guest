@@ -19,11 +19,13 @@ usage() {
     printf '%s\n' "    qemu-riscv64         -> scripts/qemu.sh riscv64"
     printf '%s\n' "    release              -> scripts/release.sh"
     printf '%s\n' "    all                  -> build all platforms sequentially"
+    printf '%s\n' "    clean                Clean build output artifacts"
     printf '%s\n' ""
     printf '%s\n' "OS:"
     printf '%s\n' "    linux                build linux kernel"
     printf '%s\n' "    arceos               build ArceOS"
     printf '%s\n' "    all|""               build all supported OSes, if not specified"
+    printf '%s\n' "    clean                Clean build output artifacts"
     printf '%s\n' ""
     printf '%s\n' "Options:"
     printf '%s\n' "    All options will be passed to the underlying script"
@@ -131,6 +133,13 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             for p in "${platforms[@]}"; do
                 echo "[ALL] Building: $p $*"
                 "$0" "$p" "$@" || { echo "[ERROR] $p build failed" >&2; exit 1; }
+            done
+            ;;
+        clean)
+            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc qemu-aarch64 qemu-x86_64 qemu-riscv64)
+            for p in "${platforms[@]}"; do
+                echo "[ALL] Building: $p $*"
+                "$0" "$p" "clean" || { echo "[ERROR] $p build failed" >&2; exit 1; }
             done
             ;;
         *)

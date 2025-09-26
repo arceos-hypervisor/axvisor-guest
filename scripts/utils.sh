@@ -26,7 +26,7 @@ vlog() {
 
 # Error handling
 die() {
-    log "❌ Error: $1"
+    log "❌ [ERROR]: $1"
     exit "${2:-1}"
 }
 

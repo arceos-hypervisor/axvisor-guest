@@ -32,6 +32,7 @@ usage() {
     printf '  linux                             Build only the Linux system\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  help, -h, --help                  Display this help information\n'
+    printf '  clean                             Clean build output artifacts\n'
     printf '\n'
     printf 'Options:\n'
     printf '  Optional, all options will be directly passed to the specific build system\n'
@@ -47,22 +48,27 @@ usage() {
 
 build_linux() {
     pushd "$LINUX_SRC_DIR" >/dev/null
-    info "Configuring build: make phytiumpi_desktop_defconfig"
-    make phytiumpi_desktop_defconfig
+    if [[ "$@" != *"clean"* ]]; then
+        info "Configuring build: make phytiumpi_desktop_defconfig"
+        make phytiumpi_desktop_defconfig
 
-    info "Starting compilation: make"
-    make > /dev/null
+        info "Starting compilation: make $@"
+        make $@ > /dev/null
+        
+        info "Copying build artifacts: $LINUX_SRC_DIR/output/images -> $LINUX_IMAGES_DIR"
+        mkdir -p "$LINUX_IMAGES_DIR"
+        rsync -av --ignore-missing-args "$LINUX_SRC_DIR/output/images/fip-all.bin" \
+        "$LINUX_SRC_DIR/output/images/fitImage" \
+        "$LINUX_SRC_DIR/output/images/kernel.its" \
+        "$LINUX_SRC_DIR/output/images/Image" \
+        "$LINUX_SRC_DIR/output/images/phytiumpi_firefly.dtb" \
+        "$LINUX_IMAGES_DIR/"
+        gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/Image"
+    else
+        info "Starting compilation: make $@"
+        make $@ > /dev/null
+    fi
     popd >/dev/null
-    
-    info "Copying build artifacts: $LINUX_SRC_DIR/output/images -> $LINUX_IMAGES_DIR"
-    mkdir -p "$LINUX_IMAGES_DIR"
-    rsync -av --ignore-missing-args "$LINUX_SRC_DIR/output/images/fip-all.bin" \
-    "$LINUX_SRC_DIR/output/images/fitImage" \
-    "$LINUX_SRC_DIR/output/images/kernel.its" \
-    "$LINUX_SRC_DIR/output/images/Image" \
-    "$LINUX_SRC_DIR/output/images/phytiumpi_firefly.dtb" \
-    "$LINUX_IMAGES_DIR/"
-    gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/Image"
 }
 
 linux() {
@@ -78,16 +84,16 @@ linux() {
 
 build_arceos() {
     pushd "$ARCEOS_SRC_DIR" >/dev/null
-    # info "Cleaning old build files: make clean"
-    # make clean >/dev/null 2>&1 || true
-
-    info "Starting compilation: make A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn FEATURES=driver-dyn,page-alloc-4g SMP=1"
-    make A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn FEATURES=driver-dyn,page-alloc-4g SMP=1
+    local make_args="A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn FEATURES=driver-dyn,page-alloc-4g SMP=1 $@"
+    info "Starting compilation: make $make_args"
+    make $make_args
     popd >/dev/null
 
-    info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
-    mkdir -p "$ARCEOS_IMAGES_DIR"
-    cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-dyn-smp1.bin"
+    if [[ "${make_args}" != *"clean"* ]]; then
+        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
+        mkdir -p "$ARCEOS_IMAGES_DIR"
+        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-dyn-smp1.bin"
+    fi
 }
 
 arceos() {
@@ -119,6 +125,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             linux "$@"
 
             arceos "$@"
+            ;;
+        clean)
+            linux "clean"
+
+            arceos "clean"
             ;;
         *)
             die "Unknown command: $cmd" >&2

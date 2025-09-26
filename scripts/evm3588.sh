@@ -32,6 +32,7 @@ usage() {
     printf '  linux                             Build only the Linux system\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  help, -h, --help                  Display this help information\n'
+    printf '  clean                             Clean build output artifacts\n'
     printf '\n'
     printf 'Options:\n'
     printf '  Optional, all options will be directly passed to the specific build system\n'
@@ -50,16 +51,18 @@ build_linux() {
     REMOTE_HOST="10.0.0.110"
     REMOTE_DIR="/runner/evm3588_linux_sdk_v1.0.3"
 
-    info "Building remotely via SSH..."
-    ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh"
+    info "Building remotely via SSH：ssh ${REMOTE_HOST} cd '${REMOTE_DIR}' && ./build.sh $@"
+    ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh $@"
 
-    info "Copying build artifacts: -> $LINUX_IMAGES_DIR"
-    mkdir -p "${LINUX_IMAGES_DIR}"
-    scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/boot.img" "${LINUX_IMAGES_DIR}/"
-    scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/"
-    scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/parameter.txt" "${LINUX_IMAGES_DIR}/"
-    scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/"
-    scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/"
+    if [[ "$@" != *"clean"* ]]; then
+        info "Copying build artifacts: -> $LINUX_IMAGES_DIR"
+        mkdir -p "${LINUX_IMAGES_DIR}"
+        scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/boot.img" "${LINUX_IMAGES_DIR}/"
+        scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/"
+        scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/parameter.txt" "${LINUX_IMAGES_DIR}/"
+        scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/"
+        scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/"
+    fi
 }
 
 linux() {
@@ -69,16 +72,16 @@ linux() {
 
 build_arceos() {
     pushd "$ARCEOS_SRC_DIR" >/dev/null
-    info "Cleaning old build files: make clean"
-    make clean >/dev/null 2>&1 || true
-
-    info "Starting compilation: make A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn FEATURES=driver-dyn,page-alloc-4g SMP=1"
-    make A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn FEATURES=driver-dyn,page-alloc-4g SMP=1
+    local make_args="A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn FEATURES=driver-dyn,page-alloc-4g SMP=1 $@"
+    info "Starting compilation: make $make_args"
+    make $make_args
     popd >/dev/null
 
-    info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
-    mkdir -p "$ARCEOS_IMAGES_DIR"
-    cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-dyn-smp1.bin"
+    if [[ "${make_args}" != *"clean"* ]]; then
+        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
+        mkdir -p "$ARCEOS_IMAGES_DIR"
+        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-dyn-smp1.bin"
+    fi
 }
 
 arceos() {
@@ -110,6 +113,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             linux "$@"
 
             arceos "$@"
+            ;;
+        clean)
+            linux "clean"
+
+            arceos "clean"
             ;;
         *)
             die "Unknown command: $cmd" >&2
