@@ -156,9 +156,11 @@ build_arceos() {
     make $make_args
     popd >/dev/null
 
-    info "Copying build artifacts -> $ARCEOS_IMAGES_DIR/${ARCH:-}"
-    mkdir -p "$ARCEOS_IMAGES_DIR/${ARCH:-}"
-    cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/${ARCH:-}/arceos-dyn-smp1.bin"
+    if [[ "${make_args}" != *"clean"* ]]; then
+        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR/${ARCH:-}"
+        mkdir -p "$ARCEOS_IMAGES_DIR/${ARCH:-}"
+        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/${ARCH:-}/arceos-dyn-smp1.bin"
+    fi
 }
 
 arceos() {
@@ -196,6 +198,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
                     arceos "$@"
                     ;;
+                clean)
+                    linux "clean"
+
+                    arceos "clean"
+                    ;;
                 *)
                     die "Unknown system: "${SYSTEM}" (supported: linux, arceos, all)"
                     ;;
@@ -203,7 +210,12 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         all)
             for arch in aarch64 riscv64 x86_64; do
-                "$0" "$arch" "$@" || { echo "[ERROR] $p build failed" >&2; exit 1; }
+                "$0" "$arch" "$@" || { echo "[ERROR] $arch build failed" >&2; exit 1; }
+            done
+            ;;
+        clean)
+            for arch in aarch64 riscv64 x86_64; do
+                "$0" "$arch" "clean" || { echo "[ERROR] $arch build failed" >&2; exit 1; }
             done
             ;;
         *)
