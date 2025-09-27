@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
-WORK_ROOT=$(cd "${SCRIPT_DIR}" && pwd -P)
-IMAGES_DIR="${WORK_ROOT}/IMAGES/qemu/linux"
+ROOT_DIR=$(cd "${SCRIPT_DIR}" && pwd -P)
+IMAGES_DIR="${ROOT_DIR}/IMAGES/qemu/linux"
 
 usage() {
     printf '%s\n' "run.sh: QEMU boot helper for aarch64, riscv64, x86_64."

@@ -6,8 +6,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
-WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
-BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
+ROOT_DIR=$(cd "${SCRIPT_DIR}/.." && pwd -P)
+BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 # Log file
 LOG_FILE="${BUILD_DIR}/log.log"  # Default log file

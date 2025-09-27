@@ -2,14 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
-WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
-BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
+ROOT_DIR=$(cd "${SCRIPT_DIR}/.." && pwd -P)
+BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
 BUSYBOX_REPO_URL="git://busybox.net/busybox.git"
 BUSYBOX_SRC_DIR="${BUILD_DIR}/busybox"
-BUSYBOX_PATCH_DIR="${WORK_ROOT}/patches/busybox"
+BUSYBOX_PATCH_DIR="${ROOT_DIR}/patches/busybox"
 
 usage() {
     printf '%s\n' 'Generate a filesystem image containing BusyBox and basic device nodes.'
@@ -91,7 +91,7 @@ create_init() {
 
 pack_fs() {
     # 0. Prepare working directory
-    OUTPUT_DIR="${OUT_DIR:-${WORK_ROOT}/IMAGES/qemu/linux/${ARCH}}"
+    OUTPUT_DIR="${OUT_DIR:-${ROOT_DIR}/IMAGES/qemu/linux/${ARCH}}"
     mkdir -p "$OUTPUT_DIR"
     TMP_DIR=$(mktemp -d)
     cleanup() { rm -rf "$TMP_DIR"; }

@@ -3,8 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
-WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
-BUILD_DIR="$(cd "${WORK_ROOT}" && mkdir -p "build" && cd "build" && pwd -P)"
+ROOT_DIR=$(cd "${SCRIPT_DIR}/.." && pwd -P)
+BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
@@ -15,10 +15,10 @@ TAC_E400_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
 # Directory configuration
 LINUX_SRC_DIR="${BUILD_DIR}/tac-e400-plc"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
-LINUX_PATCH_DIR="${WORK_ROOT}/patches/tac-e400-plc"
-ARCEOS_PATCH_DIR="${WORK_ROOT}/patches/arceos"
-LINUX_IMAGES_DIR="${WORK_ROOT}/IMAGES/tac-e400-plc/linux"
-ARCEOS_IMAGES_DIR="${WORK_ROOT}/IMAGES/tac-e400-plc/arceos"
+LINUX_PATCH_DIR="${ROOT_DIR}/patches/tac-e400-plc"
+ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
+LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/tac-e400-plc/linux"
+ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/tac-e400-plc/arceos"
 
 # Output help information
 usage() {

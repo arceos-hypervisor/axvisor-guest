@@ -3,10 +3,10 @@
 set -u
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
-WORK_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd -P)
+ROOT_DIR=$(cd "${SCRIPT_DIR}/.." && pwd -P)
 
-IMAGES_DIR="${WORK_ROOT}/IMAGES"
-RELEASE_DIR="${WORK_ROOT}/release"
+IMAGES_DIR="${ROOT_DIR}/IMAGES"
+RELEASE_DIR="${ROOT_DIR}/release"
 GITHUB_TOKEN=""
 REPO="arceos-hypervisor/axvisor-guest"
 TAG="v0.0.10"
