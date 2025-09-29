@@ -71,7 +71,7 @@ create_init() {
         '    TTY_DEV=/dev/console' \
         'fi' \
         '' \
-        '/bin/busybox mkdir -p /proc /sys /dev /dev/pts' \
+        '/bin/busybox mkdir -p /proc /sys /dev /dev/pts /etc/init.d' \
         '/bin/busybox mount -t proc proc /proc >/dev/null 2>&1' \
         '/bin/busybox mount -t sysfs sysfs /sys >/dev/null 2>&1' \
         '/bin/busybox mount -t devtmpfs devtmpfs /dev >/dev/null 2>&1 || true' \
@@ -79,14 +79,19 @@ create_init() {
         '' \
         'echo "test pass!" > "$TTY_DEV" 2>/dev/null || echo "test pass!"' \
         'if command -v cttyhack >/dev/null 2>&1; then' \
-        '    exec /bin/busybox cttyhack /bin/sh -i <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
+        '    exec /bin/busybox cttyhack /bin/sh -i' \
         'elif command -v setsid >/dev/null 2>&1; then' \
-        '    exec /bin/busybox setsid /bin/sh -i <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
+        '    exec /bin/busybox setsid /bin/sh -i' \
         'else' \
-        '    exec /bin/sh -i <"$TTY_DEV" >"$TTY_DEV" 2>&1' \
+        '    exec /bin/sh -i' \
         'fi' \
         > init
     chmod +x init
+    # 创建 /etc/init.d/rcS，避免 busybox init 报错
+    mkdir -p etc/init.d
+    echo '#!/bin/sh' > etc/init.d/rcS
+    echo 'echo rcS running' >> etc/init.d/rcS
+    chmod +x etc/init.d/rcS
 }
 
 pack_fs() {

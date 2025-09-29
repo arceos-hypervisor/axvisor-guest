@@ -44,7 +44,7 @@ run_qemu_aarch64() {
             -nographic \
             -kernel "$KERNEL" \
             -initrd "$INITRAMFS" \
-            -append "root=/dev/ram rw console=ttyAMA0" \
+            -append "root=/dev/ram rw console=ttyAMA0 init=/init" \
             -no-reboot
     elif [[ "$fs_type" == "rootfs" ]]; then
         local ROOTFS="${IMAGES_DIR}/aarch64/rootfs.img"
@@ -58,7 +58,7 @@ run_qemu_aarch64() {
             -m 1024 \
             -nographic \
             -kernel "$KERNEL" \
-            -append "root=/dev/vda rw console=ttyAMA0" \
+            -append "root=/dev/vda rw console=ttyAMA0 init=/init" \
             -drive file="$ROOTFS",format=raw,if=virtio \
             -no-reboot
     else
@@ -82,7 +82,7 @@ run_qemu_riscv64() {
             -nographic \
             -kernel "$KERNEL" \
             -initrd "$INITRAMFS" \
-            -append "root=/dev/ram rw console=ttyS0" \
+            -append "root=/dev/ram rw console=ttyS0 init=/init" \
             -no-reboot
     elif [[ "$fs_type" == "rootfs" ]]; then
         local ROOTFS="${IMAGES_DIR}/riscv64/rootfs.img"
@@ -95,7 +95,7 @@ run_qemu_riscv64() {
             -m 1024 \
             -nographic \
             -kernel "$KERNEL" \
-            -append "root=/dev/vda rw console=ttyS0" \
+            -append "root=/dev/vda rw console=ttyS0 init=/init" \
             -drive file="$ROOTFS",format=raw,if=virtio \
             -no-reboot
     else
@@ -119,7 +119,7 @@ run_qemu_x86_64() {
             -nographic \
             -kernel "$KERNEL" \
             -initrd "$INITRAMFS" \
-            -append "root=/dev/ram rw console=ttyS0" \
+            -append "root=/dev/ram rw console=ttyS0 init=/init" \
             -no-reboot
     elif [[ "$fs_type" == "rootfs" ]]; then
         local ROOTFS="${IMAGES_DIR}/x86_64/rootfs.img"
@@ -132,7 +132,7 @@ run_qemu_x86_64() {
             -m 1024 \
             -nographic \
             -kernel "$KERNEL" \
-            -append "root=/dev/sda rw console=ttyS0" \
+            -append "root=/dev/sda rw console=ttyS0 init=/init" \
             -drive file="$ROOTFS",format=raw,if=ide \
             -no-reboot
     else
