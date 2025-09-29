@@ -78,6 +78,9 @@ linux() {
 
 build_arceos() {
     pushd "$ARCEOS_SRC_DIR" >/dev/null
+    info "Cleaning old build files: make clean"
+    make clean >/dev/null 2>&1 || true
+
     local make_args="A=examples/helloworld-myplat LOG=debug LD_SCRIPT=link.x MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn FEATURES=driver-dyn,page-alloc-4g SMP=1 $@"
     info "Starting compilation: make $make_args"
     make $make_args
