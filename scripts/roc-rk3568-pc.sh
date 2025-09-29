@@ -13,12 +13,12 @@ ROC_RK3568_LINUX_REPO_URL=""
 ROC_RK3568_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
 
 # Directory configuration
-LINUX_SRC_DIR="${BUILD_DIR}/roc-rk3588-pc"
+LINUX_SRC_DIR="${BUILD_DIR}/roc-rk3568-pc"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
-LINUX_PATCH_DIR="${ROOT_DIR}/patches/roc-rk3588-pc"
+LINUX_PATCH_DIR="${ROOT_DIR}/patches/roc-rk3568-pc"
 ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
-LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/roc-rk3588-pc/linux"
-ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/roc-rk3588-pc/arceos"
+LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/roc-rk3568-pc/linux"
+ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/roc-rk3568-pc/arceos"
 
 # Output help information
 usage() {
