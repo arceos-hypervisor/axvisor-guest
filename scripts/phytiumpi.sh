@@ -65,8 +65,10 @@ build_linux() {
         "$LINUX_IMAGES_DIR/"
         gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/Image"
     else
-        info "Starting compilation: make $@"
+        info "Cleaning: make $@"
         make $@ > /dev/null
+        info "Removing ${LINUX_IMAGES_DIR}/*"
+        rm ${LINUX_IMAGES_DIR}/* || true
     fi
     popd >/dev/null
 }
@@ -96,6 +98,8 @@ build_arceos() {
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
         mkdir -p "$ARCEOS_IMAGES_DIR"
         cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin"
+    else
+        rm -rf $ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin || true
     fi
 }
 

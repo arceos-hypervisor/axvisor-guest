@@ -20,6 +20,7 @@ usage() {
     printf '%s\n' "    release              -> scripts/release.sh"
     printf '%s\n' "    all                  -> build all platforms sequentially"
     printf '%s\n' "    clean                Clean build output artifacts"
+    printf '%s\n' "    cleanall|distclean   Remove all directories"
     printf '%s\n' ""
     printf '%s\n' "OS:"
     printf '%s\n' "    linux                build linux kernel"
@@ -138,9 +139,14 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         clean)
             platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc qemu-aarch64 qemu-x86_64 qemu-riscv64)
             for p in "${platforms[@]}"; do
-                echo "[ALL] Building: $p $*"
+                echo "[ALL] Cleaning: $p $*"
                 "$0" "$p" "clean" || { echo "[ERROR] $p build failed" >&2; exit 1; }
             done
+            ;;
+        cleanall|distclean)
+            echo "[CLEANALL] Removing build, IMAGES and release directories"
+            rm -rf build IMAGES release
+            echo "[CLEANALL] Removed all directories"
             ;;
         *)
             echo "[ERROR] Unknown platform: $cmd" >&2

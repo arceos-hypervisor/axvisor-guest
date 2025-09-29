@@ -52,10 +52,10 @@ build_linux() {
     REMOTE_DIR="/runner/firefly_rk3568_sdk"
     REMOTE_IMAGES_DIR="output/RK3568-FIREFLY-ROC-PC-SE/latest/IMAGES"
 
-    info "Building remotely via SSH: ssh ${REMOTE_HOST} cd '${REMOTE_DIR}' && ./build.sh firefly_rk3568_roc-rk3568-pc_ubuntu_defconfig && ./build.sh $@"
-    ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh firefly_rk3568_roc-rk3568-pc_ubuntu_defconfig && ./build.sh $@"
-
     if [[ "$@" != *"clean"* ]]; then
+        info "Building remotely via SSH: ssh ${REMOTE_HOST} cd '${REMOTE_DIR}' && ./build.sh firefly_rk3568_roc-rk3568-pc_ubuntu_defconfig && ./build.sh $@"
+        ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh firefly_rk3568_roc-rk3568-pc_ubuntu_defconfig && ./build.sh $@"
+
         info "Copying build artifacts: -> $LINUX_IMAGES_DIR"
         mkdir -p "${LINUX_IMAGES_DIR}"
         scp "${REMOTE_HOST}:${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/boot.img" "${LINUX_IMAGES_DIR}/"
@@ -63,6 +63,11 @@ build_linux() {
         scp "${REMOTE_HOST}:${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/"
         scp "${REMOTE_HOST}:${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/../kernel/rk3568-firefly-roc-pc-se.dtb" "${LINUX_IMAGES_DIR}/"
         scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/"
+    else
+        info "Cleaning remotely via SSH: ssh ${REMOTE_HOST} cd '${REMOTE_DIR}' && ./build.sh cleanall"
+        ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./build.sh cleanall"
+        info "Removing ${LINUX_IMAGES_DIR}/*"
+        rm ${LINUX_IMAGES_DIR}/* || true
     fi
 }
 
@@ -85,6 +90,8 @@ build_arceos() {
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
         mkdir -p "$ARCEOS_IMAGES_DIR"
         cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin"
+    else
+        rm -rf $ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin || true
     fi
 }
 

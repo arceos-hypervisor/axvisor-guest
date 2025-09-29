@@ -84,26 +84,33 @@ build_linux() {
     # info "Cleaning Linux: make distclean"
     # make distclean || true
 
-    if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
-        info "Configuring Linux: make ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${defconfig}"
-        make ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${defconfig}"
-    fi
-    
-    info "Building Linux: make -j$(nproc) ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${commands[@]}"
-    make -j"$(nproc)" ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${commands[@]}"
-    
-    popd >/dev/null
-
-    # If it's a full build, copy the image and create the root filesystem
-    if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
-        mkdir -p "${LINUX_IMAGES_DIR}/${ARCH:-}"
-        KIMG_PATH="${LINUX_SRC_DIR}/${kimg_subpath}"
-        [[ -f "${KIMG_PATH}" ]] || die "Kernel image not found: ${KIMG_PATH}"
-        info "Copying image: ${KIMG_PATH} -> ${LINUX_IMAGES_DIR}/${ARCH:-}"
-        cp -f "${KIMG_PATH}" "${LINUX_IMAGES_DIR}/${ARCH:-}/"
+    if [[ "$@" != *"clean"* ]]; then
+        if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
+            info "Configuring Linux: make ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${defconfig}"
+            make ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${defconfig}"
+        fi
         
-        info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${LINUX_IMAGES_DIR}/${ARCH:-}"
-        build_rootfs
+        info "Building Linux: make -j$(nproc) ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} ${commands[@]}"
+        make -j"$(nproc)" ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "${commands[@]}"
+        
+        popd >/dev/null
+
+        # If it's a full build, copy the image and create the root filesystem
+        if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
+            mkdir -p "${LINUX_IMAGES_DIR}/${ARCH:-}"
+            KIMG_PATH="${LINUX_SRC_DIR}/${kimg_subpath}"
+            [[ -f "${KIMG_PATH}" ]] || die "Kernel image not found: ${KIMG_PATH}"
+            info "Copying image: ${KIMG_PATH} -> ${LINUX_IMAGES_DIR}/${ARCH:-}"
+            cp -f "${KIMG_PATH}" "${LINUX_IMAGES_DIR}/${ARCH:-}/"
+            
+            info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${LINUX_IMAGES_DIR}/${ARCH:-}"
+            build_rootfs
+        fi
+    else
+        info "Building Linux: make -j$(nproc) ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} clean"
+        make -j"$(nproc)" ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "clean"
+        info "Removing ${LINUX_IMAGES_DIR}/*"
+        rm ${LINUX_IMAGES_DIR}/${ARCH:-}/* || true
     fi
 }
 
@@ -162,6 +169,8 @@ build_arceos() {
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR/${ARCH:-}"
         mkdir -p "$ARCEOS_IMAGES_DIR/${ARCH:-}"
         cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/${ARCH:-}/arceos-${ARCH}-dyn-smp1.bin"
+    else
+        rm -rf $ARCEOS_IMAGES_DIR/${ARCH:-}/arceos-${ARCH}-dyn-smp1.bin || true
     fi
 }
 

@@ -48,21 +48,24 @@ usage() {
 
 build_linux() {
     pushd "$LINUX_SRC_DIR/EDGE_KERNEL" >/dev/null
-
-    info "Configuring kernel: cp "$LINUX_SRC_DIR/.config" .config"
-    cp "$LINUX_SRC_DIR/.config" .config
-
-    info "Starting compilation: make -j$(nproc) $@"
-    make -j$(nproc) $@ 2>&1
-
-    popd >/dev/null
-
     if [[ "$@" != *"clean"* ]]; then
+        info "Configuring kernel: cp "$LINUX_SRC_DIR/.config" .config"
+        cp "$LINUX_SRC_DIR/.config" .config
+
+        info "Starting compilation: make -j$(nproc) $@"
+        make -j$(nproc) $@ 2>&1
+
         info "Copying build artifacts -> $LINUX_IMAGES_DIR"
         mkdir -p "$LINUX_IMAGES_DIR"
         cp "$LINUX_SRC_DIR/EDGE_KERNEL/arch/arm64/boot/Image" "$LINUX_IMAGES_DIR/"
         cp "$LINUX_SRC_DIR/EDGE_KERNEL/arch/arm64/boot/dts/phytium/e2000q-hanwei-board.dtb" "$LINUX_IMAGES_DIR/"
+    else
+        info "Cleaning: make -j$(nproc) clean"
+        make -j$(nproc) clean 2>&1
+        info "Removing ${LINUX_IMAGES_DIR}/*"
+        rm ${LINUX_IMAGES_DIR}/* || true
     fi
+    popd >/dev/null
 }
 
 linux() {
@@ -90,6 +93,8 @@ build_arceos() {
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
         mkdir -p "$ARCEOS_IMAGES_DIR"
         cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin"
+    else
+        rm -rf $ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin || true
     fi
 }
 
