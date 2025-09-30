@@ -157,9 +157,9 @@ build_arceos() {
     make clean >/dev/null 2>&1 || true
 
     if [ "${ARCH}" == "aarch64" ]; then
-        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g SMP=1 $@"
+        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
     else
-        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features SMP=1 $@"
+        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
     fi
     info "Starting compilation: make $make_args"
     make $make_args
