@@ -14,6 +14,7 @@ usage() {
     printf '%s\n' "    roc-rk3568-pc        -> scripts/roc-rk3568-pc.sh"
     printf '%s\n' "    evm3588              -> scripts/evm3588.sh"
     printf '%s\n' "    tac-e400-plc         -> scripts/tac-e400-plc.sh"
+    printf '%s\n' "    orangepi             -> scripts/orangepi.sh"
     printf '%s\n' "    qemu-aarch64         -> scripts/qemu.sh aarch64"
     printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh x86_64"
     printf '%s\n' "    qemu-riscv64         -> scripts/qemu.sh riscv64"
@@ -48,76 +49,47 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             usage
             exit 0
             ;;
-        phytiumpi)
-            script_path="${SCRIPTS_DIR}/phytiumpi.sh"
+        phytiumpi|roc-rk3568-pc|evm3588|tac-e400-plc|orangepi)
+            script_path="${SCRIPTS_DIR}/${cmd}.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
             if [ $# -eq 0 ]; then
+                echo "Running: $script_path" "all"
                 exec "$script_path" "all"
             else
+                echo "Running: $script_path" "$@"
                 exec "$script_path" "$@"
             fi
             ;;
-        roc-rk3568-pc)
-            script_path="${SCRIPTS_DIR}/roc-rk3568-pc.sh"
+        qemu-aarch64|qemu-x86_64|qemu-riscv64)
+            str="${cmd}" && prefix="${str%-*}" && arch="${str#*-}"
+            script_path="${SCRIPTS_DIR}/${prefix}.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
             if [ $# -eq 0 ]; then
-                exec "$script_path" "all"
+                echo "Running: $script_path" "${arch}" "all"
+                exec "$script_path" "${arch}" "all"
             else
-                exec "$script_path" "$@"
+                echo "Running: $script_path" "${arch}" "$@"
+                exec "$script_path" "${arch}" "$@"
             fi
             ;;
-        evm3588)
-            script_path="${SCRIPTS_DIR}/evm3588.sh"
-            [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
-            chmod +x "$script_path" 2>/dev/null || true
-            if [ $# -eq 0 ]; then
-                exec "$script_path" "all"
-            else
-                exec "$script_path" "$@"
-            fi
+        all|clean)
+            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc orangepi qemu-aarch64 qemu-x86_64 qemu-riscv64)
+            for p in "${platforms[@]}"; do
+                if [[ "$cmd" == "all" ]]; then
+                    echo "Building: $p $*"
+                    "$0" "$p" "$@" || { echo "[ERROR] $p build failed" >&2; exit 1; }
+                else
+                    echo "Cleaning: $p $*"
+                    "$0" "$p" "clean" || { echo "[ERROR] $p clean failed" >&2; exit 1; }
+                fi
+            done
             ;;
-        tac-e400-plc)
-            script_path="${SCRIPTS_DIR}/tac-e400-plc.sh"
-            [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
-            chmod +x "$script_path" 2>/dev/null || true
-            if [ $# -eq 0 ]; then
-                exec "$script_path" "all"
-            else
-                exec "$script_path" "$@"
-            fi
-            ;;
-        qemu-aarch64)
-            script_path="${SCRIPTS_DIR}/qemu.sh"
-            [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
-            chmod +x "$script_path" 2>/dev/null || true
-            if [ $# -eq 0 ]; then
-                exec "$script_path" "aarch64" "all"
-            else
-                exec "$script_path" "aarch64" "$@"
-            fi
-            ;;
-        qemu-x86_64)
-            script_path="${SCRIPTS_DIR}/qemu.sh"
-            [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
-            chmod +x "$script_path" 2>/dev/null || true
-            exec "$script_path" x86_64 "$@"
-            if [ $# -eq 0 ]; then
-                exec "$script_path" "x86_64" "all"
-            else
-                exec "$script_path" "aarch64" "$@"
-            fi
-            ;;
-        qemu-riscv64)
-            script_path="${SCRIPTS_DIR}/qemu.sh"
-            [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
-            chmod +x "$script_path" 2>/dev/null || true
-            if [ $# -eq 0 ]; then
-                exec "$script_path" "riscv64" "all"
-            else
-                exec "$script_path" "aarch64" "$@"
-            fi
+        cleanall|distclean)
+            echo "[CLEANALL] Removing build, IMAGES and release directories"
+            rm -rf build IMAGES release
+            echo "[CLEANALL] Removed all directories"
             ;;
         release)
             script_path="${SCRIPTS_DIR}/release.sh"
@@ -128,25 +100,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             else
                 exec "$script_path" "$@"
             fi
-            ;;
-        all)
-            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc qemu-aarch64 qemu-x86_64 qemu-riscv64)
-            for p in "${platforms[@]}"; do
-                echo "[ALL] Building: $p $*"
-                "$0" "$p" "$@" || { echo "[ERROR] $p build failed" >&2; exit 1; }
-            done
-            ;;
-        clean)
-            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc qemu-aarch64 qemu-x86_64 qemu-riscv64)
-            for p in "${platforms[@]}"; do
-                echo "[ALL] Cleaning: $p $*"
-                "$0" "$p" "clean" || { echo "[ERROR] $p build failed" >&2; exit 1; }
-            done
-            ;;
-        cleanall|distclean)
-            echo "[CLEANALL] Removing build, IMAGES and release directories"
-            rm -rf build IMAGES release
-            echo "[CLEANALL] Removed all directories"
             ;;
         *)
             echo "[ERROR] Unknown platform: $cmd" >&2
