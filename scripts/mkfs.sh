@@ -87,7 +87,7 @@ create_init() {
         'fi' \
         > init
     chmod +x init
-    # 创建 /etc/init.d/rcS，避免 busybox init 报错
+    # Create /etc/init.d/rcS to avoid busybox init errors
     mkdir -p etc/init.d
     echo '#!/bin/sh' > etc/init.d/rcS
     echo 'echo rcS running' >> etc/init.d/rcS

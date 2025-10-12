@@ -39,15 +39,15 @@ jobs:
         with:
           files: ${{ steps.release.outputs.RELEASE_DIR }}/*
           body: |
-            ## 客户机镜像文件
-            
-            本次发布包含以下平台的构建产物:
+            ## Guest images
+
+            This release includes build artifacts for the following platforms:
             - QEMU (x86_64, RISC-V, AArch64, LoongArch)
-            - 飞腾派 (Phytium Pi)
-            - ROC-RK3568-PC 开发板
-            - TAC-E400-PLC 工业计算机
-            
-            文件命名格式: `arceos-{board}-{arch}-{config}.bin`
+            - Phytium Pi
+            - ROC-RK3568-PC development board
+            - TAC-E400-PLC industrial controller
+
+            File naming convention: `arceos-{board}-{arch}-{config}.bin`
           generate_release_notes: true
           draft: false
           prerelease: false
