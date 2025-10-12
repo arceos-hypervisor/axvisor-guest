@@ -13,8 +13,7 @@
 
 ## 客户机
 
-下表列出了目前维护的硬件开发板和 QEMU 虚拟机目标，可直接对照脚本名称和输出目录定位镜像。
-每个平台的脚本都会准备交叉编译器、回放内置补丁并下载依赖源码，生成 Linux 与 ArceOS 两类镜像供测试和发版使用。
+下表列出了目前维护的硬件开发板和 QEMU 虚拟机目标，可直接对照脚本名称和输出目录定位镜像。每个平台的脚本都会准备交叉编译器、回放内置补丁并下载依赖源码，生成 Linux 与 ArceOS 两类镜像供测试和发版使用。
 
 | 平台 | 目标架构 | Linux 构建方式 | ArceOS 配置 | 输出目录 |
 | --- | --- | --- | --- | --- |
@@ -23,19 +22,18 @@
 | EVM3588 开发板 | aarch64 | 通过内网 SDK 服务器 `10.0.0.110` 的 `evm3588_linux_sdk` 构建 | 同上 | `IMAGES/evm3588/linux`、`IMAGES/evm3588/arceos` |
 | TAC-E400-PLC 工业控制器 | aarch64 | 本地拉取 `tac-e400-plc` 仓库并编译内核 | 同上 | `IMAGES/tac-e400-plc/linux`、`IMAGES/tac-e400-plc/arceos` |
 | QEMU 虚拟机 | aarch64 / riscv64 / x86_64 | 克隆主线 Linux 并交叉编译，配合 `scripts/mkfs.sh` 生成根文件系统 | aarch64 使用 `axplat-aarch64-dyn`；riscv64 使用 `axplat-riscv64-qemu-virt`；x86_64 使用 `axplat-x86-pc` | `IMAGES/qemu/linux/<arch>`、`IMAGES/qemu/arceos/<arch>` |
+| 香橙派 5 Plus | aarch64 | 使用官方 orangepi-build 来构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
 
 > **注意：** 脚本会按需克隆源代码与应用补丁，请确保具备相应仓库访问权限以及（对需要远程构建的开发板）可访问内网构建机。 
 
 ## 构建
 
-构建流程由 `build.sh` 与 `scripts/*.sh` 协同完成：前者负责统一入口，后者覆盖各平台的具体命令。
-执行全量任务前，请确认已有镜像是否需要备份，避免 `clean` 阶段删除仍在使用的文件。
+构建流程由 `build.sh` 与 `scripts/*.sh` 协同完成：前者负责统一入口，后者覆盖各平台的具体命令。执行全量任务前，请确认已有镜像是否需要备份，避免 `clean` 阶段删除仍在使用的文件。
 
 
 ### 环境准备
 
-执行构建前请保证宿主机剩余磁盘空间不少于 30GB，并能稳定访问各厂商的源码仓库或内网 SDK 服务。
-建议在 Ubuntu 24.04 或兼容发行版上执行以下命令，安装交叉编译器、内核工具链以及根文件系统生成必需的软件包：
+执行构建前请保证宿主机剩余磁盘空间不少于 30GB，并能稳定访问各厂商的源码仓库或内网 SDK 服务。建议在 Ubuntu 24.04 或兼容发行版上执行以下命令，安装交叉编译器、内核工具链以及根文件系统生成必需的软件包：
 
 ```bash
 sudo apt update
@@ -48,8 +46,7 @@ sudo apt install \
   python3 python3-venv curl git openssh-client
 ```
 
-若在容器或 CI 中运行脚本，需提前准备好代理、APT 缓存和 SSH 凭据，否则克隆和远程构建步骤会失败。
-为方便执行，建议赋予各个脚本执行权限：
+若在容器或 CI 中运行脚本，需提前准备好代理、APT 缓存和 SSH 凭据，否则克隆和远程构建步骤会失败。为方便执行，建议赋予各个脚本执行权限：
 
 ```bash
 chmod +x build.sh scripts/*.sh
@@ -57,8 +54,7 @@ chmod +x build.sh scripts/*.sh
 
 ### `build.sh`
 
-`build.sh` 将克隆源码、回放补丁、调用平台脚本和收集镜像打包成一组子命令。
-脚本会自动判断是否需要先生成根文件系统或更新外部仓库，避免重复执行相同的步骤：
+`build.sh` 将克隆源码、回放补丁、调用平台脚本和收集镜像打包成一组子命令。脚本会自动判断是否需要先生成根文件系统或更新外部仓库，避免重复执行相同的步骤：
 
 ```bash
 ./build.sh help                # 查看所有可用命令
@@ -71,8 +67,7 @@ chmod +x build.sh scripts/*.sh
 
 ### 平台脚本
 
-如需单独调试某个平台，可直接执行对应的 `scripts/<board>.sh` 获取更细粒度的命令。
-大部分脚本提供 `help` 子命令，你可以查询 Linux、ArceOS、rootfs 等子任务的参数，方便集成到 CI：
+如需单独调试某个平台，可直接执行对应的 `scripts/<board>.sh` 获取更细粒度的命令。大部分脚本提供 `help` 子命令，你可以查询 Linux、ArceOS、rootfs 等子任务的参数，方便集成到 CI：
 
 ```bash
 scripts/phytiumpi.sh all              # Linux + ArceOS
@@ -98,8 +93,7 @@ scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
 
 ## 镜像
 
-所有构建产物会落盘到 `IMAGES/<platform>/<os>` 目录，其中 `<os>` 取值为 `linux` 或 `arceos`。
-目录命名与脚本输出保持一致，便于 `scripts/release.sh`、`http_server.py` 以及外部自动化流程直接复用：
+所有构建产物会放到 `IMAGES/<platform>/<os>` 目录中，其中 `<os>` 取值为 `linux` 或 `arceos`。目录命名与脚本输出保持一致，便于 `scripts/release.sh`、`http_server.py` 以及外部自动化流程直接复用：
 
 | 输出目录 | 内容说明 | 典型文件 / 命名规则 |
 | --- | --- | --- |
@@ -114,10 +108,15 @@ scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
 | `qemu/linux/aarch64` | QEMU aarch64 内核与根文件系统 | `Image`、`initramfs.cpio.gz`、`rootfs.img` |
 | `qemu/linux/riscv64` | QEMU riscv64 内核与根文件系统 | `Image`、`initramfs.cpio.gz`、`rootfs.img` |
 | `qemu/linux/x86_64` | QEMU x86_64 内核与根文件系统 | `bzImage`、`initramfs.cpio.gz`、`rootfs.img` |
-| `qemu/arceos/<arch>` | 各架构 ArceOS 固件 | `arceos-<arch>-dyn-smp1.bin`（脚本自动命名） |
+| `qemu/arceos/aarch64` | QEMU aarch64 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
+| `qemu/arceos/riscv64` | QEMU riscv64 ArceOS 固件 | `arceos-riscv64-dyn-smp1.bin` |
+| `qemu/arceos/x86_64` | QEMU x86_64 ArceOS 固件 | `arceos-x86_64-dyn-smp1.bin` |
+| `orangepi/linux` | Orange Pi 5 Plus 厂商 SDK 或本地构建 | `boot.img`、`parameter.txt`、`u-boot.img`、`orangepi5-plus.dtb`、`Image` |
+| `orangepi/arceos` | 对应 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
 
 构建时产生的下载缓存、编译日志和中间包位于 `build/`，打包结果位于 `release/`，在排障或复现时请先检查这些目录。
-快速验证镜像可执行 `run.sh`，脚本会选择对应的 QEMU 架构、内核和 rootfs 参数启动虚拟机：
+
+对于 Qemu 镜像，可执行 `run.sh` 来进行快速验证，脚本会选择对应的 QEMU 架构、内核和 rootfs 参数启动虚拟机：
 
 ```bash
 ./run.sh aarch64 ramfs   # 使用 initramfs 启动 QEMU AArch64
@@ -126,13 +125,11 @@ scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
 
 ### 打包与发布
 
-当镜像构建完毕后，可通过打包与发布脚本将产物整理为 tarball，并根据标签上传到远端仓库。
-`scripts/release.sh` 会读取 `IMAGES/` 下的目录生成归档文件，随后可与 GitHub Release 或内网 HTTP 服务配套使用。
+当镜像构建完毕后，可通过打包与发布脚本将产物整理为 tarball，并根据标签上传到远端仓库。`scripts/release.sh` 会读取 `IMAGES/` 下的目录生成归档文件，随后可与 GitHub Release 或内网 HTTP 服务配套使用。
 
 #### 打包镜像
 
-打包流程会遍历 `IMAGES/` 下的每个平台目录，为 linux 与 arceos 产物各生成一个压缩包并存放在 `release/`。
-如需剔除调试镜像，可通过 `--include` 或 `--exclude` 过滤目录，降低上传体积：
+打包流程会遍历 `IMAGES/` 下的每个平台目录，为 linux 与 arceos 产物各生成一个压缩包并存放在 `release/`。如需剔除调试镜像，可通过 `--include` 或 `--exclude` 过滤目录，降低上传体积：
 
 ```bash
 ./build.sh release pack
@@ -142,8 +139,7 @@ scripts/release.sh pack --in_dir IMAGES --out_dir release
 
 #### Github Release
 
-执行 GitHub 发布前需设置 `GITHUB_TOKEN` 并确认当前仓库具备 Release 写权限。
-脚本会根据指定 Tag 创建或更新 Release，并把 `release/` 中的压缩包依次上传：
+执行 GitHub 发布前需设置 `GITHUB_TOKEN` 并确认当前仓库具备 Release 写权限。脚本会根据指定 Tag 创建或更新 Release，并把 `release/` 中的压缩包依次上传：
 
 ```bash
 scripts/release.sh github \
@@ -157,8 +153,7 @@ scripts/release.sh github \
 
 ### 本地分发
 
-`http_server.py` 可在后台以守护进程方式托管 `IMAGES/` 目录，通过 HTTP 提供镜像下载。
-脚本仅依赖 Python 标准库，额外支持日志输出、健康检查和 PID 文件，适用于开发机或 CI 节点的临时分发：
+`http_server.py` 可在后台以守护进程方式托管 `IMAGES/` 目录，通过 HTTP 提供镜像下载。脚本仅依赖 Python 标准库，额外支持日志输出、健康检查和 PID 文件，适用于开发机或 CI 节点的临时分发：
 
 #### 启动与管理
 
@@ -177,8 +172,7 @@ python3 http_server.py restart --port 9000
 python3 http_server.py stop --port 9000
 ```
 
-启动时会在 `IMAGES/.images_http.pid` 写入进程号，`status`、`restart`、`stop` 都基于此定位服务；如果端口被占用，可通过 `--bind` 指定新地址。
-常用环境变量与参数：
+启动时会在 `IMAGES/.images_http.pid` 写入进程号，`status`、`restart`、`stop` 都基于此定位服务；如果端口被占用，可通过 `--bind` 指定新地址。常用环境变量与参数：
 
 - `SERVE_DIR`：覆盖默认服务目录（默认为仓库根目录下的 `IMAGES`）。
 - `--log-file`：指定日志文件（默认写入 `IMAGES/.images_http.log`）。
@@ -186,8 +180,7 @@ python3 http_server.py stop --port 9000
 
 #### 客户端示例
 
-服务启动后会开放目录索引，可直接浏览镜像文件并下载，便于在测试机上快速拉取所需版本。
-部署在共享网络时，可以结合 Nginx Basic Auth 或防火墙白名单限制访问范围。
+服务启动后会开放目录索引，可直接浏览镜像文件并下载，便于在测试机上快速拉取所需版本。部署在共享网络时，可以结合 Nginx Basic Auth 或防火墙白名单限制访问范围。
 
 ```bash
 # 下载 QEMU aarch64 的内核镜像
@@ -199,8 +192,7 @@ curl -O http://127.0.0.1:9000/phytiumpi/arceos/arceos-aarch64-dyn-smp1.bin
 
 ## 贡献
 
-欢迎提交新的平台脚本、改进现有构建流程或完善文档示例，我们会在 Review 中协助对齐输出目录与命名规范。
-提交 Pull Request 前请阅读脚本内的注释，保持 Shell 风格一致并附上可复现实验步骤。
+欢迎提交新的平台脚本、改进现有构建流程或完善文档示例，我们会在 Review 中协助对齐输出目录与命名规范。提交 Pull Request 前请阅读脚本内的注释，保持 Shell 风格一致并附上可复现实验步骤。
 
 1. FORK -> PR
 
