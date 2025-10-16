@@ -49,7 +49,7 @@ usage() {
 build_linux() {
     # Since Rockchip's Linux SDK is managed by a large repository using repo, and manufacturers usually do not provide online repositories (typically only compressed packages), we log in to a prepared SDK server via SSH for building.
     REMOTE_HOST="10.3.10.194"
-    REMOTE_DIR="~/repository/firefly_rk3568_sdk"
+    REMOTE_DIR="/home/runner/repository/firefly_rk3568_sdk"
     REMOTE_IMAGES_DIR="output/RK3568-FIREFLY-ROC-PC-SE/latest/IMAGES"
     # Determine local IP addresses (IPv4) to detect if we are on REMOTE_HOST.
     # We collect all non-loopback IPv4 addresses assigned to the host.

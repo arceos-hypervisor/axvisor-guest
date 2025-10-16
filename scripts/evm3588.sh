@@ -49,7 +49,7 @@ usage() {
 build_linux() {
     # Since the Linux SDK from Rockchip is managed by a large repository using repo, and manufacturers usually do not provide online repositories (typically only compressed packages), we log in to a prepared SDK server via SSH for building.
     REMOTE_HOST="10.3.10.194"
-    REMOTE_DIR="~/repository/evm3588_linux_sdk_v1.0.3"
+    REMOTE_DIR="/home/runner/repository/evm3588_linux_sdk_v1.0.3"
 
     # Determine local IP addresses (IPv4) to detect if we are on REMOTE_HOST.
     # We collect all non-loopback IPv4 addresses assigned to the host.
