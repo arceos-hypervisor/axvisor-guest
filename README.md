@@ -46,7 +46,8 @@ sudo apt install \
   gcc-riscv64-linux-gnu g++-riscv64-linux-gnu \
   bc fakeroot coreutils cpio gzip rsync file \
   debootstrap binfmt-support debian-archive-keyring eatmydata \
-  python3 python3-venv curl git openssh-client
+  python3 python3-venv curl git openssh-client libmpc-dev libgmp-dev \
+  lz4 chrpath gawk texinfo chrpath diffstat expect
 ```
 
 When running inside containers or CI, prepare proxies, APT caches, and SSH credentials in advance; failing to do so will break cloning and remote build actions.
