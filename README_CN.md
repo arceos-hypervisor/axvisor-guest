@@ -203,6 +203,6 @@ curl -O http://127.0.0.1:9000/phytiumpi/arceos/arceos-aarch64-dyn-smp1.bin
 
 2. 如对构建流程、发布策略或镜像分发有进一步需求，欢迎在仓库 Issue 中反馈。
 
-# 许可证
+## 许可证
 
 本项目基于 MIT 许可证授权 - 详见 [LICENSE](LICENSE) 文件。

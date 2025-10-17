@@ -203,6 +203,6 @@ We welcome new platform scripts, improvements to the existing build flows, or do
 
 2. If you have further requirements around the build, release, or distribution workflow, please open an issue so we can discuss them.
 
-# License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
