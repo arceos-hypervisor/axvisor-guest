@@ -11,26 +11,27 @@
 - `scripts/release.sh` 支持将镜像一键打包并推送到 GitHub Release；
 - `http_server.py` 可为本地镜像目录启动轻量的 HTTP 分发服务，方便团队内部共享与 CI 下载。 
 
-## 客户机
+## 开发板支持
 
 下表列出了目前维护的硬件开发板和 QEMU 虚拟机目标，可直接对照脚本名称和输出目录定位镜像。每个平台的脚本都会准备交叉编译器、回放内置补丁并下载依赖源码，生成 Linux 与 ArceOS 两类镜像供测试和发版使用。
 
 | 平台 | 目标架构 | Linux 构建方式 | ArceOS 配置 | 输出目录 |
 | --- | --- | --- | --- | --- |
-| Phytium Pi 开发板 | aarch64 | 直接克隆官方 [Phytium Pi OS](https://gitee.com/phytium_embedded/phytium-pi-os) 源码并编译 | `axplat-aarch64-dyn`，启用 `driver-dyn,page-alloc-4g,SMP=1` | `IMAGES/phytiumpi/linux`、`IMAGES/phytiumpi/arceos` |
-| ROC-RK3588-PC 开发板 | aarch64 | 通过内网 SDK 服务器 `10.0.0.110` 执行 Firefly 官方脚本并回传产物 | 同上 | `IMAGES/roc-rk3588-pc/linux`、`IMAGES/roc-rk3588-pc/arceos` |
-| EVM3588 开发板 | aarch64 | 通过内网 SDK 服务器 `10.0.0.110` 的 `evm3588_linux_sdk` 构建 | 同上 | `IMAGES/evm3588/linux`、`IMAGES/evm3588/arceos` |
-| TAC-E400-PLC 工业控制器 | aarch64 | 本地拉取 `tac-e400-plc` 仓库并编译内核 | 同上 | `IMAGES/tac-e400-plc/linux`、`IMAGES/tac-e400-plc/arceos` |
-| QEMU 虚拟机 | aarch64 / riscv64 / x86_64 | 克隆主线 Linux 并交叉编译，配合 `scripts/mkfs.sh` 生成根文件系统 | aarch64 使用 `axplat-aarch64-dyn`；riscv64 使用 `axplat-riscv64-qemu-virt`；x86_64 使用 `axplat-x86-pc` | `IMAGES/qemu/linux/<arch>`、`IMAGES/qemu/arceos/<arch>` |
-| 香橙派 5 Plus | aarch64 | 使用官方 orangepi-build 来构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
-| 黑芝麻 A1000 域控制器 | aarch64 | 官方 Linux 源码构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
-
-> **注意：** 脚本会按需克隆源代码与应用补丁，请确保具备相应仓库访问权限以及（对需要远程构建的开发板）可访问内网构建机。 
+| Phytium Pi 开发板 | aarch64 | 直接克隆官方 [Phytium Pi OS](https://gitee.com/phytium_embedded/phytium-pi-os) 源码来构建 | 直接克隆 https://github.com/arceos-hypervisor/arceos 来构建 | `IMAGES/phytiumpi/linux`、`IMAGES/phytiumpi/arceos` |
+| ROC-RK3588-PC 开发板 | aarch64 | 通过内网 `10.3.10.194` 服务器的特定目录下 SDK 源码构建 | 同上 | `IMAGES/roc-rk3588-pc/linux`、`IMAGES/roc-rk3588-pc/arceos` |
+| EVM3588 开发板 | aarch64 | 通过内网 `10.3.10.194` 服务器的特定目录下 SDK 源码构建 | 同上 | `IMAGES/evm3588/linux`、`IMAGES/evm3588/arceos` |
+| TAC-E400-PLC 工业控制器 | aarch64 | 拉取 `tac-e400-plc` 私有仓库后构建 | 同上 | `IMAGES/tac-e400-plc/linux`、`IMAGES/tac-e400-plc/arceos` |
+| QEMU 虚拟机 | aarch64 / riscv64 / x86_64 | 克隆主线 Linux 并交叉编译，配合 `scripts/mkfs.sh` 生成根文件系统 | 同上 | `IMAGES/qemu/linux/<arch>`、`IMAGES/qemu/arceos/<arch>` |
+| 香橙派 5 Plus | aarch64 | 直接克隆 [orangepi-build](https://github.com/orangepi-xunlong/orangepi-build) 源码来构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
+| 黑芝麻 A1000 域控制器 | aarch64 | 拉取 `bst-a1000` 私有仓库后构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
 
 ## 构建
 
 构建流程由 `build.sh` 与 `scripts/*.sh` 协同完成：前者负责统一入口，后者覆盖各平台的具体命令。执行全量任务前，请确认已有镜像是否需要备份，避免 `clean` 阶段删除仍在使用的文件。
 
+1. 脚本会按需克隆源代码与应用补丁，请确保具备相应仓库访问权限以及（对需要远程构建的开发板）可访问内网构建机
+2. 对于某些开发板 SDK，会应用 `patches` 中的各种补丁
+3. 部分 SDK 在构建时要求管理员权限，需要手动输入或者配置为免输入密码
 
 ### 环境准备
 
@@ -56,16 +57,18 @@ chmod +x build.sh scripts/*.sh
 
 ### `build.sh`
 
-`build.sh` 将克隆源码、回放补丁、调用平台脚本和收集镜像打包成一组子命令。脚本会自动判断是否需要先生成根文件系统或更新外部仓库，避免重复执行相同的步骤：
+直接执行 `build.sh` 相关子命令将克隆源码、回放补丁、调用平台脚本执行构建，并最终收集构建镜像打。脚本会自动判断是否需要先生成根文件系统或更新外部仓库，避免重复执行相同的步骤。
 
 ```bash
 ./build.sh help                # 查看所有可用命令
+./build.sh all                 # 依次构建所有平台（耗时较长）
 ./build.sh phytiumpi           # 构建飞腾派 Linux + ArceOS
 ./build.sh roc-rk3568-pc linux # 仅构建 ROC-RK3588-PC Linux 内核及镜像
 ./build.sh qemu-aarch64 all    # 生成 QEMU aarch64 的 Linux+ArceOS+根文件系统
-./build.sh all                 # 依次构建所有平台（耗时较长）
 ./build.sh clean               # 清理各平台的构建缓存与镜像
 ```
+
+在构建时产生的下载缓存、编译日志和中间包位于 `build/` 目录中，最终结果会统一复制到 `IMAGES/` 目录中，打包结果位于 `release/` 目录中。
 
 ### 平台脚本
 
@@ -84,10 +87,9 @@ scripts/tac-e400-plc.sh all           # TAC-E400-PLC 全量构建
 scripts/evm3588.sh arceos             # 仅 ArceOS 固件
 ```
 
-> **远程构建说明**：`evm3588.sh` 与 `roc-rk3568-pc.sh` 会通过 SSH 登录 `10.0.0.110`，执行厂商提供的 SDK 构建脚本并下载产物。建议为该流程准备只读权限的专用账号和 SSH key，必要时通过跳板机限制访问源。
+对于 `evm3588.sh` 与 `roc-rk3568-pc.sh` 会通过 SSH 登录 `10.3.10.194`，执行厂商提供的 SDK 构建脚本并下载产物。建议为该流程准备只读权限的专用账号和 SSH key，必要时通过跳板机限制访问源。
 
-若只需生成最小根文件系统，可单独执行 `scripts/mkfs.sh` 产出 `initramfs.cpio.gz` 和 `rootfs.img`（QEMU 流程会自动调用该脚本）。
-脚本支持 `--extra-package`、`--apt-mirror` 等参数，可按需追加 BusyBox applets 或 Debian 包，构建更接近目标部署环境的根文件系统：
+若只需生成最小根文件系统，可单独执行 `scripts/mkfs.sh` 产出 `initramfs.cpio.gz` 和 `rootfs.img`（QEMU 流程会自动调用该脚本）。脚本支持 `--extra-package`、`--apt-mirror` 等参数，可按需追加 BusyBox applets 或 Debian 包，构建更接近目标部署环境的根文件系统：
 
 ```bash
 scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
@@ -95,7 +97,7 @@ scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
 
 ## 镜像
 
-所有构建产物会放到 `IMAGES/<platform>/<os>` 目录中，其中 `<os>` 取值为 `linux` 或 `arceos`。目录命名与脚本输出保持一致，便于 `scripts/release.sh`、`http_server.py` 以及外部自动化流程直接复用：
+所有构建产物会统一放到 `IMAGES/<platform>/<os>` 目录中，其中 `<os>` 取值为 `linux` 或 `arceos`。目录命名与脚本输出保持一致，便于 `scripts/release.sh`、`http_server.py` 以及外部自动化流程直接复用：
 
 | 输出目录 | 内容说明 | 典型文件 / 命名规则 |
 | --- | --- | --- |
@@ -118,14 +120,13 @@ scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
 | `bst-a1000/linux` | 黑芝麻 A1000 域控制 Linux 源码构建 |  `Image`、`bsta1000b-fada.dtb`、`bsta1000b-fadb.dtb` |
 | `bst-a1000/arceos` | 对应 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
 
-构建时产生的下载缓存、编译日志和中间包位于 `build/`，打包结果位于 `release/`，在排障或复现时请先检查这些目录。
+1. 对于 QEMU 镜像，可执行 `run.sh` 来进行快速验证，脚本会选择对应的 QEMU 架构、内核和 rootfs 参数启动虚拟机：
 
-对于 Qemu 镜像，可执行 `run.sh` 来进行快速验证，脚本会选择对应的 QEMU 架构、内核和 rootfs 参数启动虚拟机：
-
-```bash
-./run.sh aarch64 ramfs   # 使用 initramfs 启动 QEMU AArch64
-./run.sh riscv64 rootfs  # 使用 ext4 rootfs 启动 QEMU RISC-V
-```
+  ```bash
+  ./run.sh aarch64 ramfs   # 使用 initramfs 启动 QEMU AArch64
+  ./run.sh riscv64 rootfs  # 使用 ext4 rootfs 启动 QEMU RISC-V
+  ```
+2. `IMAGES` 目录中实际仅仅包含了 SDK 生成的镜像的部分镜像
 
 ### 打包与发布
 
@@ -201,3 +202,7 @@ curl -O http://127.0.0.1:9000/phytiumpi/arceos/arceos-aarch64-dyn-smp1.bin
 1. FORK -> PR
 
 2. 如对构建流程、发布策略或镜像分发有进一步需求，欢迎在仓库 Issue 中反馈。
+
+# 许可证
+
+本项目基于 MIT 许可证授权 - 详见 [LICENSE](LICENSE) 文件。
