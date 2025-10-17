@@ -24,6 +24,7 @@ Each platform script prepares the cross compiler, replays the built-in patches, 
 | TAC-E400-PLC industrial controller | aarch64 | Clone the `tac-e400-plc` repository locally and compile the kernel | Same as above | `IMAGES/tac-e400-plc/linux`, `IMAGES/tac-e400-plc/arceos` |
 | QEMU virtual machine | aarch64 / riscv64 / x86_64 | Clone mainline Linux, cross-compile it, and use `scripts/mkfs.sh` to build the root file system | `axplat-aarch64-dyn` for aarch64; `axplat-riscv64-qemu-virt` for riscv64; `axplat-x86-pc` for x86_64 | `IMAGES/qemu/linux/<arch>`, `IMAGES/qemu/arceos/<arch>` |
 | Orange Pi 5 Plus | aarch64 | Build using the official `orangepi-build` tool | Same as above | `IMAGES/orangepi/linux`, `IMAGES/orangepi/arceos` |
+| Black Sesame A1000 domain controller | aarch64 | Clone the `bst-a1000` repository and build locally | Same as above | `IMAGES/bst-a1000/linux`, `IMAGES/bst-a1000/arceos` |
 
 > **Note:** The scripts clone upstream repositories and apply patches on demand. Ensure you have access to the referenced repositories and to the intranet builders required by remote workflows. 
 
@@ -121,10 +122,12 @@ The directory names match the script output conventions so that `scripts/release
 | `qemu/arceos/x86_64` | QEMU x86_64 ArceOS firmware | `arceos-x86_64-dyn-smp1.bin` |
 | `orangepi/linux` | Orange Pi 5 Plus vendor SDK or local builds | `boot.img`, `parameter.txt`, `u-boot.img`, `orangepi5-plus.dtb`, `Image` |
 | `orangepi/arceos` | Matching ArceOS firmware | `arceos-aarch64-dyn-smp1.bin` |
+| `bst-a1000/linux` | Black Sesame A1000 domain controller Linux kernel and device trees | `Image`, `bsta1000b-fada.dtb`, `bsta1000b-fadb.dtb` |
+| `bst-a1000/arceos` | Matching ArceOS firmware | `arceos-aarch64-dyn-smp1.bin` |
 
 Download caches, build logs, and intermediate packages live under `build/`, while packaged archives are stored in `release/`; inspect these folders first when troubleshooting failures.
 
-对于 Qemu 镜像，可执行 `run.sh` 来进行快速验证，脚本会选择对应的 QEMU 架构、内核和 rootfs 参数启动虚拟机：
+For QEMU images, you can quickly validate them with `run.sh`. The script selects the appropriate QEMU architecture, kernel, and rootfs parameters to boot the VM:
 
 ```bash
 ./run.sh aarch64 ramfs   # Boot QEMU AArch64 with an initramfs

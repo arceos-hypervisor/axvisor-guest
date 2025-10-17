@@ -23,6 +23,7 @@
 | TAC-E400-PLC 工业控制器 | aarch64 | 本地拉取 `tac-e400-plc` 仓库并编译内核 | 同上 | `IMAGES/tac-e400-plc/linux`、`IMAGES/tac-e400-plc/arceos` |
 | QEMU 虚拟机 | aarch64 / riscv64 / x86_64 | 克隆主线 Linux 并交叉编译，配合 `scripts/mkfs.sh` 生成根文件系统 | aarch64 使用 `axplat-aarch64-dyn`；riscv64 使用 `axplat-riscv64-qemu-virt`；x86_64 使用 `axplat-x86-pc` | `IMAGES/qemu/linux/<arch>`、`IMAGES/qemu/arceos/<arch>` |
 | 香橙派 5 Plus | aarch64 | 使用官方 orangepi-build 来构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
+| 黑芝麻 A1000 域控制器 | aarch64 | 官方 Linux 源码构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
 
 > **注意：** 脚本会按需克隆源代码与应用补丁，请确保具备相应仓库访问权限以及（对需要远程构建的开发板）可访问内网构建机。 
 
@@ -114,6 +115,8 @@ scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
 | `qemu/arceos/x86_64` | QEMU x86_64 ArceOS 固件 | `arceos-x86_64-dyn-smp1.bin` |
 | `orangepi/linux` | Orange Pi 5 Plus 厂商 SDK 或本地构建 | `boot.img`、`parameter.txt`、`u-boot.img`、`orangepi5-plus.dtb`、`Image` |
 | `orangepi/arceos` | 对应 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
+| `bst-a1000/linux` | 黑芝麻 A1000 域控制 Linux 源码构建 |  `Image`、`bsta1000b-fada.dtb`、`bsta1000b-fadb.dtb` |
+| `bst-a1000/arceos` | 对应 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
 
 构建时产生的下载缓存、编译日志和中间包位于 `build/`，打包结果位于 `release/`，在排障或复现时请先检查这些目录。
 
