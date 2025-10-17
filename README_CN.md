@@ -44,7 +44,7 @@ sudo apt install \
   bc fakeroot coreutils cpio gzip rsync file \
   debootstrap binfmt-support debian-archive-keyring eatmydata \
   python3 python3-venv curl git openssh-client libmpc-dev libgmp-dev \
-  lz4 chrpath gawk texinfo chrpath diffstat expect
+  lz4 chrpath gawk texinfo chrpath diffstat expect cmake
 ```
 
 若在容器或 CI 中运行脚本，需提前准备好代理、APT 缓存和 SSH 凭据，否则克隆和远程构建步骤会失败。为方便执行，建议赋予各个脚本执行权限：
