@@ -1,32 +1,32 @@
 diff --git a/examples/helloworld-myplat/Cargo.toml b/examples/helloworld-myplat/Cargo.toml
-index 2fa9c1fc..06f83c18 100644
+index 0117eef..cc3a753 100644
 --- a/examples/helloworld-myplat/Cargo.toml
 +++ b/examples/helloworld-myplat/Cargo.toml
-@@ -10,12 +10,13 @@ aarch64-raspi4 = ["dep:axplat-aarch64-raspi"]
- aarch64-qemu-virt = ["dep:axplat-aarch64-qemu-virt"]
- aarch64-bsta1000b = ["dep:axplat-aarch64-bsta1000b"]
+@@ -9,12 +9,13 @@ aarch64-bsta1000b = ["dep:axplat-aarch64-bsta1000b"]
  aarch64-phytium-pi = ["dep:axplat-aarch64-phytium-pi"]
+ aarch64-qemu-virt = ["dep:axplat-aarch64-qemu-virt"]
+ aarch64-raspi4 = ["dep:axplat-aarch64-raspi"]
 +aarch64-dyn = ["dep:axplat-aarch64-dyn"]
- riscv64-qemu-virt = ["dep:axplat-riscv64-qemu-virt"]
  loongarch64-qemu-virt = ["dep:axplat-loongarch64-qemu-virt"]
+ riscv64-qemu-virt = ["dep:axplat-riscv64-qemu-virt"]
+ x86-pc = ["dep:axplat-x86-pc"]
  
  [dependencies]
- cfg-if = "1.0"
--axstd = { workspace = true, features = ["myplat"], optional = true }
+-axstd = {workspace = true, features = ["myplat"], optional = true}
 +axstd = { workspace = true, features = ["alloc", "myplat"], optional = true }
+ cfg-if = "1.0"
  
  [target.'cfg(target_arch = "x86_64")'.dependencies]
- axplat-x86-pc = { version = "0.2", features = ["smp", "irq"], optional = true }
-@@ -25,6 +26,7 @@ axplat-aarch64-qemu-virt = { version = "0.2", features = ["smp", "irq"], optiona
- axplat-aarch64-raspi = { version = "0.2", features = ["smp", "irq"], optional = true }
- axplat-aarch64-bsta1000b = { version = "0.2", features = ["smp", "irq"], optional = true }
- axplat-aarch64-phytium-pi = { version = "0.2", features = ["smp", "irq"], optional = true }
-+axplat-aarch64-dyn = { git = "https://github.com/arceos-hypervisor/axplat-aarch64-dyn.git", features = ["smp", "irq"], optional = true }
+@@ -24,6 +25,7 @@ axplat-x86-pc = {workspace = true, features = ["smp", "irq"], optional = true}
+ axplat-aarch64-bsta1000b = {workspace = true, features = ["smp", "irq"], optional = true}
+ axplat-aarch64-phytium-pi = {workspace = true, features = ["smp", "irq"], optional = true}
+ axplat-aarch64-qemu-virt = {workspace = true, features = ["smp", "irq"], optional = true}
++axplat-aarch64-dyn = { git = "https://github.com/arceos-hypervisor/axplat-aarch64-dyn.git", branch = "v03", features = ["smp", "irq"], optional = true }
+ axplat-aarch64-raspi = {workspace = true, features = ["smp", "irq"], optional = true}
  
  [target.'cfg(target_arch = "riscv64")'.dependencies]
- axplat-riscv64-qemu-virt = { version = "0.2", features = ["smp", "irq"], optional = true }
 diff --git a/examples/helloworld-myplat/src/main.rs b/examples/helloworld-myplat/src/main.rs
-index ff1198b4..15887ec0 100644
+index ff1198b..15887ec 100644
 --- a/examples/helloworld-myplat/src/main.rs
 +++ b/examples/helloworld-myplat/src/main.rs
 @@ -16,6 +16,8 @@ cfg_if::cfg_if! {
@@ -39,7 +39,7 @@ index ff1198b4..15887ec0 100644
          #[cfg(target_os = "none")] // ignore in rust-analyzer & cargo test
          compile_error!("No platform crate linked!\n\nPlease add `extern crate <platform>` in your code.");
 diff --git a/scripts/make/features.mk b/scripts/make/features.mk
-index 7a7f153f..9a01ebbf 100644
+index 7a7f153..9a01ebb 100644
 --- a/scripts/make/features.mk
 +++ b/scripts/make/features.mk
 @@ -54,7 +54,7 @@ ifeq ($(BUS),mmio)

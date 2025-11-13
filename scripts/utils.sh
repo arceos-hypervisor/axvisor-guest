@@ -21,7 +21,9 @@ log() {
 
 # Verbose logging (only outputs when VERBOSE=1)
 vlog() {
-    [[ $VERBOSE -eq 1 ]] && log "$@" || true
+    if [[ ${VERBOSE:-0} -eq 1 ]]; then
+        log "$@"
+    fi
 }
 
 # Error handling
