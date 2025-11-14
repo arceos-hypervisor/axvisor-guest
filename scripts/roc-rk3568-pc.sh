@@ -93,6 +93,7 @@ build_linux() {
             cp "${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
             cp "${REMOTE_DIR}/${REMOTE_IMAGES_DIR}/../kernel/rk3568-firefly-roc-pc-se.dtb" "${LINUX_IMAGES_DIR}/roc-rk3568-pc_linux.dtb" 2>/dev/null || true
             cp "${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/roc-rk3568-pc_linux" 2>/dev/null || true
+            cp "${REMOTE_DIR}/u-boot/uboot.img" "${LINUX_IMAGES_DIR}/roc-rk3568-pc_uboot.img" 2>/dev/null || true
         fi
     else
         if $is_remote; then
