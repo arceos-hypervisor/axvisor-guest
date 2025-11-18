@@ -63,8 +63,8 @@ build_linux() {
         "$LINUX_SRC_DIR/output/images/Image" \
         "$LINUX_SRC_DIR/output/images/phytiumpi_firefly.dtb" \
         "$LINUX_IMAGES_DIR/"
-        mv "$LINUX_IMAGES_DIR/phytiumpi_firefly.dtb" "$LINUX_IMAGES_DIR/phytiumpi_linux.dtb"
-        gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/phytiumpi_linux"
+        mv "$LINUX_IMAGES_DIR/phytiumpi_firefly.dtb" "$LINUX_IMAGES_DIR/phytiumpi.dtb"
+        gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/phytiumpi"
     else
         info "Cleaning: make $@"
         make $@ > /dev/null
@@ -98,9 +98,9 @@ build_arceos() {
     if [[ "${make_args}" != *"clean"* ]]; then
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
         mkdir -p "$ARCEOS_IMAGES_DIR"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/phytiumpi_arceos"
+        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/phytiumpi"
     else
-        rm -rf $ARCEOS_IMAGES_DIR/phytiumpi_arceos || true
+        rm -rf $ARCEOS_IMAGES_DIR/phytiumpi || true
     fi
 }
 

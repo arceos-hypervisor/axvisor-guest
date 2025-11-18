@@ -57,8 +57,8 @@ build_linux() {
         rsync -av --ignore-missing-args "$LINUX_SRC_DIR/kernel/orange-pi-6.1-rk35xx/arch/arm64/boot/Image" \
         "$LINUX_SRC_DIR/kernel/orange-pi-6.1-rk35xx/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtb" \
         "$LINUX_IMAGES_DIR/"
-        mv "$LINUX_IMAGES_DIR/Image" "$LINUX_IMAGES_DIR/orangepi_linux"
-        mv "$LINUX_IMAGES_DIR/rk3588-orangepi-5-plus.dtb" "$LINUX_IMAGES_DIR/orangepi_linux.dtb"
+        mv "$LINUX_IMAGES_DIR/Image" "$LINUX_IMAGES_DIR/orangepi-5-plus"
+        mv "$LINUX_IMAGES_DIR/rk3588-orangepi-5-plus.dtb" "$LINUX_IMAGES_DIR/orangepi-5-plus.dtb"
     else
         info "Cleaning: nothing to do for Orange Pi Linux, just removing ${LINUX_IMAGES_DIR}/*"
         rm ${LINUX_IMAGES_DIR}/* || true
@@ -90,9 +90,9 @@ build_arceos() {
     if [[ "${make_args}" != *"clean"* ]]; then
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
         mkdir -p "$ARCEOS_IMAGES_DIR"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/orangepi_arceos"
+        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/orangepi-5-plus"
     else
-        rm -rf $ARCEOS_IMAGES_DIR/orangepi_arceos || true
+        rm -rf $ARCEOS_IMAGES_DIR/orangepi-5-plus || true
     fi
 }
 

@@ -94,9 +94,9 @@ build_arceos() {
     if [[ "${make_args}" != *"clean"* ]]; then
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
         mkdir -p "$ARCEOS_IMAGES_DIR"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin"
+        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/bst-a1000"
     else
-        rm -rf $ARCEOS_IMAGES_DIR/arceos-aarch64-dyn-smp1.bin || true
+        rm -rf $ARCEOS_IMAGES_DIR/bst-a1000 || true
     fi
 }
 

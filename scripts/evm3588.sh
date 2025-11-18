@@ -73,8 +73,8 @@ build_linux() {
             scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/boot.img" "${LINUX_IMAGES_DIR}/"
             scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/"
             scp "${REMOTE_HOST}:${REMOTE_DIR}/rockdev/parameter.txt" "${LINUX_IMAGES_DIR}/"
-            scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/evm3588_linux"
-            scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/evm3588_linux.dtb"
+            scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/evm3588"
+            scp "${REMOTE_HOST}:${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/evm3588.dtb"
         else
             info "Detected REMOTE_HOST ($REMOTE_HOST) is the current machine; building locally in ${REMOTE_DIR}"
             if [[ -d "$REMOTE_DIR" ]]; then
@@ -89,8 +89,8 @@ build_linux() {
             cp "${REMOTE_DIR}/rockdev/boot.img" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
             cp "${REMOTE_DIR}/rockdev/MiniLoaderAll.bin" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
             cp "${REMOTE_DIR}/rockdev/parameter.txt" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
-            cp "${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/evm3588_linux" 2>/dev/null || true
-            cp "${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/evm3588_linux.dtb" 2>/dev/null || true
+            cp "${REMOTE_DIR}/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/evm3588" 2>/dev/null || true
+            cp "${REMOTE_DIR}/kernel/arch/arm64/boot/dts/rockchip/evm3588.dtb" "${LINUX_IMAGES_DIR}/evm3588.dtb" 2>/dev/null || true
         fi
     else
         if $is_remote; then
