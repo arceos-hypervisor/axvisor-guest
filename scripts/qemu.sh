@@ -18,6 +18,7 @@ LINUX_PATCH_DIR="${ROOT_DIR}/patches/qemu"
 ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/qemu/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/qemu/arceos"
+FS_IMAGES_DIR="${ROOT_DIR}/IMAGES/fs"
 
 # Display help information
 usage() {
@@ -51,6 +52,14 @@ usage() {
     printf '  scripts/qemu.sh aarch64 linux     # Build ARM64 Linux\n'
     printf '  scripts/qemu.sh x86_64 arceos     # Build x86_64 ArceOS\n'
     printf '  scripts/qemu.sh riscv64 all       # Build all systems for RISC-V\n'
+}
+
+build_rootfs() {
+    if [ ! -f "${SCRIPT_DIR}/mkfs.sh" ]; then
+        die "Root filesystem script does not exist: ${SCRIPT_DIR}/mkfs.sh"
+    fi
+    bash "${SCRIPT_DIR}/mkfs.sh" "${ARCH}" "--dir" "${FS_IMAGES_DIR}"
+    success "Root filesystem creation completed"
 }
 
 build_linux() {
@@ -103,7 +112,8 @@ build_linux() {
             info "Copying image: ${KIMG_PATH} -> ${LINUX_IMAGES_DIR}/${ARCH:-}/qemu-${ARCH}"
             cp -f "${KIMG_PATH}" "${LINUX_IMAGES_DIR}/${ARCH:-}/qemu-${ARCH}"
             
-            info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${LINUX_IMAGES_DIR}/${ARCH:-}"
+            FS_IMAGES_DIR=${LINUX_IMAGES_DIR}/${ARCH:-}
+            info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${FS_IMAGES_DIR}"
             build_rootfs
         fi
     else
@@ -123,14 +133,6 @@ linux() {
 
     info "Starting to build ${ARCH} Linux system..."
     build_linux "$@"
-}
-
-build_rootfs() {
-    if [ ! -f "${SCRIPT_DIR}/mkfs.sh" ]; then
-        die "Root filesystem script does not exist: ${SCRIPT_DIR}/mkfs.sh"
-    fi
-    bash "${SCRIPT_DIR}/mkfs.sh" "${ARCH}" "--dir ${LINUX_IMAGES_DIR}/${ARCH:-}"
-    success "Root filesystem creation completed"
 }
 
 build_arceos() {
@@ -169,6 +171,10 @@ build_arceos() {
         info "Copying build artifacts -> $ARCEOS_IMAGES_DIR/${ARCH:-}"
         mkdir -p "$ARCEOS_IMAGES_DIR/${ARCH:-}"
         cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH}"
+
+        FS_IMAGES_DIR=${ARCEOS_IMAGES_DIR}/${ARCH:-}
+        info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${FS_IMAGES_DIR}"
+        build_rootfs
     else
         rm -rf $ARCEOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH} || true
     fi

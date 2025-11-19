@@ -177,6 +177,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         aarch64|riscv64|x86_64)
             ARCH="$cmd"
+            OUT_DIR=""
             # Check if first arg is --dir or -d, only if at least one extra arg
             if [[ $# -ge 2 && ( "$1" == "--dir" || "$1" == "-d" ) ]]; then
                 OUT_DIR="$2"
