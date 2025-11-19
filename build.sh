@@ -14,7 +14,7 @@ usage() {
     printf '%s\n' "    roc-rk3568-pc        -> scripts/roc-rk3568-pc.sh"
     printf '%s\n' "    evm3588              -> scripts/evm3588.sh"
     printf '%s\n' "    tac-e400-plc         -> scripts/tac-e400-plc.sh"
-    printf '%s\n' "    orangepi-5-plus      -> scripts/orangepi.sh"
+    printf '%s\n' "    orangepi-5-plus      -> scripts/orangepi-5-plus.sh"
     printf '%s\n' "    bst-a1000            -> scripts/bst-a1000.sh"
     printf '%s\n' "    qemu-aarch64         -> scripts/qemu.sh aarch64"
     printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh x86_64"
