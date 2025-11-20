@@ -53,7 +53,7 @@ build_linux() {
         make phytiumpi_desktop_defconfig
 
         info "Starting compilation: make $@"
-        make $@ > /dev/null
+        make $@
         
         info "Copying build artifacts: $LINUX_SRC_DIR/output/images -> $LINUX_IMAGES_DIR"
         mkdir -p "$LINUX_IMAGES_DIR"
@@ -67,7 +67,7 @@ build_linux() {
         gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/phytiumpi"
     else
         info "Cleaning: make $@"
-        make $@ > /dev/null
+        make $@
         info "Removing ${LINUX_IMAGES_DIR}/*"
         rm ${LINUX_IMAGES_DIR}/* || true
     fi
@@ -88,7 +88,7 @@ linux() {
 build_arceos() {
     pushd "$ARCEOS_SRC_DIR" >/dev/null
     info "Cleaning old build files: make clean"
-    make clean >/dev/null 2>&1 || true
+    make clean || true
 
     local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
     info "Starting compilation: make $make_args"

@@ -156,7 +156,7 @@ build_arceos() {
 
     pushd "$ARCEOS_SRC_DIR" >/dev/null
     info "Cleaning old build files: make clean"
-    make clean >/dev/null 2>&1 || true
+    make clean || true
 
     if [ "${ARCH}" == "aarch64" ]; then
         local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
