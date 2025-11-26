@@ -235,7 +235,7 @@ build_nimbos() {
     # Build axvm-bios-x86 for x86_64 architecture
     if [ "${ARCH}" == "x86_64" ]; then
         info "Building axvm-bios-x86 for x86_64..."
-        build_axvm_bios_x86
+        axvm_bios_x86
     fi
 
     pushd "$NIMBOS_SRC_DIR" >/dev/null
@@ -339,9 +339,6 @@ build_axvm_bios_x86() {
 axvm_bios_x86() {
     info "Cloning axvm-bios-x86 source repository $AXVM_BIOS_X86_REPO_URL -> $AXVM_BIOS_X86_SRC_DIR"
     clone_repository "$AXVM_BIOS_X86_REPO_URL" "$AXVM_BIOS_X86_SRC_DIR"
-
-    info "Applying patches..."
-    apply_patches "$AXVM_BIOS_X86_PATCH_DIR" "$AXVM_BIOS_X86_SRC_DIR"
 
     info "Starting to build axvm-bios-x86..."
     build_axvm_bios_x86 "$@"
