@@ -327,6 +327,10 @@ build_nimbos() {
     cp "$binary_path" "$NIMBOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH}_usertests"
 
     popd >/dev/null
+
+    # Create disk image for NimbOS
+    info "Creating NimbOS disk image..."
+    create_nimbos_disk_image
     
     success "NimbOS build completed successfully"
 }
@@ -367,6 +371,58 @@ build_axvm_bios_x86() {
     cp "$bios_bin" "$ARCEOS_IMAGES_DIR/x86_64/axvm-bios.bin"
     
     success "axvm-bios-x86 build completed successfully"
+}
+
+create_nimbos_disk_image() {
+    local disk_image_path="${NIMBOS_IMAGES_DIR}/${ARCH:-}/nimbos-${ARCH}.img"
+    local nimbos_binary="${NIMBOS_IMAGES_DIR}/${ARCH:-}/qemu-${ARCH}_usertests"
+    local mount_point="${BUILD_DIR}/nimbos_mount_${ARCH}"
+    
+    # Check if nimbos binary exists
+    if [ ! -f "$nimbos_binary" ]; then
+        die "NimbOS usertests binary not found: $nimbos_binary"
+    fi
+    
+    info "Creating disk image: $disk_image_path"
+    
+    # Create a 64MB disk image (adjust size as needed)
+    local disk_size_mb=64
+    dd if=/dev/zero of="$disk_image_path" bs=1M count=$disk_size_mb status=progress
+    
+    # Format with ext4 filesystem
+    info "Formatting disk image with ext4..."
+    mkfs.ext4 -F "$disk_image_path"
+    
+    # Mount and copy NimbOS binary
+    info "Mounting disk image and copying NimbOS binary..."
+    
+    sudo rm -rf "$mount_point"
+    sudo mkdir -p "$mount_point"
+    
+    # Mount the disk image
+    sudo mount -o loop "$disk_image_path" "$mount_point"
+    
+    # Copy NimbOS binary
+    sudo cp "$nimbos_binary" "$mount_point/nimbos-${ARCH}.bin"
+    
+    # Copy BIOS for x86_64
+    if [ "${ARCH}" == "x86_64" ] && [ -f "$NIMBOS_SRC_DIR/kernel/axvm-bios.bin" ]; then
+        info "Copying AXVM BIOS to disk image..."
+        sudo cp "$NIMBOS_SRC_DIR/kernel/axvm-bios.bin" "$mount_point/axvm-bios.bin"
+    fi
+    
+    # Set proper permissions
+    sudo chown -R root:root "$mount_point"
+    sudo chmod 755 "$mount_point"
+    sudo chmod 644 "$mount_point"/*
+    
+    # Unmount
+    sudo umount "$mount_point"
+    
+    # Cleanup mount point
+    sudo rm -rf "$mount_point"
+    
+    success "NimbOS disk image created: $disk_image_path (${disk_size_mb}MB)"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
