@@ -391,7 +391,7 @@ create_nimbos_disk_image() {
     
     # Format with ext4 filesystem
     info "Formatting disk image with ext4..."
-    mkfs.ext4 -F "$disk_image_path"
+    mkfs.fat -F 32 "$disk_image_path"
     
     # Mount and copy NimbOS binary
     info "Mounting disk image and copying NimbOS binary..."
