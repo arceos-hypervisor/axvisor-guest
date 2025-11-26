@@ -366,9 +366,8 @@ build_axvm_bios_x86() {
         die "axvm-bios.bin not found: ${bios_bin}"
     fi
 
-    info "Copying axvm-bios.bin -> $ARCEOS_IMAGES_DIR/x86_64/"
-    mkdir -p "$ARCEOS_IMAGES_DIR/x86_64"
-    cp "$bios_bin" "$ARCEOS_IMAGES_DIR/x86_64/axvm-bios.bin"
+    info "Copying axvm-bios.bin -> $NIMBOS_IMAGES_DIR/x86_64/"
+    cp "$bios_bin" "$NIMBOS_IMAGES_DIR/x86_64/axvm-bios.bin"
     
     success "axvm-bios-x86 build completed successfully"
 }
@@ -406,7 +405,7 @@ create_nimbos_disk_image() {
     sudo cp "$nimbos_binary" "$mount_point/nimbos-${ARCH}.bin"
     
     # Copy BIOS for x86_64
-    if [ "${ARCH}" == "x86_64" ] && [ -f "$NIMBOS_SRC_DIR/kernel/axvm-bios.bin" ]; then
+    if [ "${ARCH}" == "x86_64" ] && [ -f "$AXVM_BIOS_X86_SRC_DIR/kernel/axvm-bios.bin" ]; then
         info "Copying AXVM BIOS to disk image..."
         sudo cp "$NIMBOS_SRC_DIR/kernel/axvm-bios.bin" "$mount_point/axvm-bios.bin"
     fi
