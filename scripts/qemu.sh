@@ -11,13 +11,13 @@ source $SCRIPT_DIR/utils.sh
 LINUX_REPO_URL="https://github.com/torvalds/linux.git"
 ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
 NIMBOS_REPO_URL="https://github.com/arceos-hypervisor/nimbos.git"
-AXVM_BIOS_REPO_URL="https://github.com/arceos-hypervisor/axvm-bios-x86.git"
+AXVM_BIOS_X86_REPO_URL="https://github.com/arceos-hypervisor/axvm-bios-x86.git"
 
 # Source directories
 LINUX_SRC_DIR="${BUILD_DIR}/qemu_linux"
 ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 NIMBOS_SRC_DIR="${BUILD_DIR}/nimbos"
-AXVM_BIOS_SRC_DIR="${BUILD_DIR}/axvm-bios-x86"
+AXVM_BIOS_X86_SRC_DIR="${BUILD_DIR}/axvm-bios-x86"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/qemu"
 ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/qemu/linux"
@@ -244,23 +244,53 @@ build_nimbos() {
     # info "Setting up environment: make -C kernel env ARCH=${ARCH}"
     # make -C kernel env ARCH="${ARCH}"
 
-    # Check musl toolchain
+    # Install musl toolchain
     local musl_prefix=""
+    local musl_path=""
     case "${ARCH}" in
         x86_64)
             musl_prefix="x86_64-linux-musl"
+            musl_path="x86_64-linux-musl-cross"
             ;;
         aarch64)
             musl_prefix="aarch64-linux-musl"
+            musl_path="aarch64-linux-musl-cross"
             ;;
         riscv64)
             musl_prefix="riscv64-linux-musl"
+            musl_path="riscv64-linux-musl-cross"
             ;;
     esac
 
+    # Check if musl toolchain is available
     if ! command -v ${musl_prefix}-gcc &> /dev/null; then
         warn "musl toolchain ${musl_prefix}-gcc not found in PATH"
-        warn "Attempting to build with available toolchain..."
+        
+        # Try to download and install musl toolchain
+        local musl_dir="${BUILD_DIR}/musl-${ARCH}"
+        if [ ! -d "$musl_dir" ]; then
+            info "Downloading musl toolchain from https://musl.cc/${musl_path}.tgz"
+            
+            pushd "${BUILD_DIR}" >/dev/null
+            if wget -q "https://musl.cc/${musl_path}.tgz"; then
+                info "Extracting musl toolchain..."
+                tar -xf "${musl_path}.tgz"
+                mv "${musl_path}" "musl-${ARCH}"
+                rm -f "${musl_path}.tgz"
+                success "musl toolchain installed to ${musl_dir}"
+            else
+                warn "Failed to download musl toolchain, attempting to build without it..."
+            fi
+            popd >/dev/null
+        fi
+        
+        # Add musl toolchain to PATH if it exists
+        if [ -d "$musl_dir/bin" ]; then
+            export PATH="$musl_dir/bin:$PATH"
+            info "Added musl toolchain to PATH: $musl_dir/bin"
+        fi
+    else
+        info "musl toolchain ${musl_prefix}-gcc found in PATH"
     fi
 
     # Build user programs
@@ -314,6 +344,14 @@ nimbos() {
     build_nimbos "$@"
 }
 
+axvm_bios_x86() {
+    info "Cloning axvm-bios-x86 source repository $AXVM_BIOS_X86_REPO_URL -> $AXVM_BIOS_X86_SRC_DIR"
+    clone_repository "$AXVM_BIOS_X86_REPO_URL" "$AXVM_BIOS_X86_SRC_DIR"
+
+    info "Starting to build axvm-bios-x86..."
+    build_axvm_bios_x86 "$@"
+}
+
 build_axvm_bios_x86() {
     pushd "$AXVM_BIOS_X86_SRC_DIR" >/dev/null
 
@@ -334,14 +372,6 @@ build_axvm_bios_x86() {
     cp "$bios_bin" "$ARCEOS_IMAGES_DIR/x86_64/axvm-bios.bin"
     
     success "axvm-bios-x86 build completed successfully"
-}
-
-axvm_bios_x86() {
-    info "Cloning axvm-bios-x86 source repository $AXVM_BIOS_X86_REPO_URL -> $AXVM_BIOS_X86_SRC_DIR"
-    clone_repository "$AXVM_BIOS_X86_REPO_URL" "$AXVM_BIOS_X86_SRC_DIR"
-
-    info "Starting to build axvm-bios-x86..."
-    build_axvm_bios_x86 "$@"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
