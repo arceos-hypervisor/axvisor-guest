@@ -405,7 +405,7 @@ create_nimbos_disk_image() {
     sudo cp "$nimbos_binary" "$mount_point/nimbos-${ARCH}.bin"
     
     # Copy BIOS for x86_64
-    if [ "${ARCH}" == "x86_64" ] && [ -f "$AXVM_BIOS_X86_SRC_DIR/kernel/axvm-bios.bin" ]; then
+    if [ "${ARCH}" == "x86_64" ] && [ -f "$AXVM_BIOS_X86_SRC_DIR/out/axvm-bios.bin" ]; then
         info "Copying AXVM BIOS to disk image..."
         sudo cp "$NIMBOS_SRC_DIR/kernel/axvm-bios.bin" "$mount_point/axvm-bios.bin"
     fi
