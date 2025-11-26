@@ -327,11 +327,6 @@ build_nimbos() {
     cp "$binary_path" "$NIMBOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH}_usertests"
 
     popd >/dev/null
-
-    # Create root filesystem
-    FS_IMAGES_DIR=${NIMBOS_IMAGES_DIR}/${ARCH:-}
-    info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${FS_IMAGES_DIR}"
-    build_rootfs
     
     success "NimbOS build completed successfully"
 }
