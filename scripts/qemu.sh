@@ -20,9 +20,7 @@ NIMBOS_SRC_DIR="${BUILD_DIR}/nimbos"
 AXVM_BIOS_X86_SRC_DIR="${BUILD_DIR}/axvm-bios-x86"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/qemu"
 ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
-LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/qemu/linux"
-ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/qemu/arceos"
-NIMBOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/qemu/nimbos"
+IMAGES_BASE_DIR="${ROOT_DIR}/IMAGES/qemu"
 FS_IMAGES_DIR="${ROOT_DIR}/IMAGES/fs"
 
 # Display help information
@@ -115,21 +113,23 @@ build_linux() {
 
         # If it's a full build, copy the image and create the root filesystem
         if [[ ${#commands[@]} -eq 0 ]] || [[ "${commands[0]}" == "all" ]]; then
-            mkdir -p "${LINUX_IMAGES_DIR}/${ARCH:-}"
+            LINUX_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/linux"
+            mkdir -p "${LINUX_IMAGES_DIR}"
             KIMG_PATH="${LINUX_SRC_DIR}/${kimg_subpath}"
             [[ -f "${KIMG_PATH}" ]] || die "Kernel image not found: ${KIMG_PATH}"
-            info "Copying image: ${KIMG_PATH} -> ${LINUX_IMAGES_DIR}/${ARCH:-}/qemu-${ARCH}"
-            cp -f "${KIMG_PATH}" "${LINUX_IMAGES_DIR}/${ARCH:-}/qemu-${ARCH}"
+            info "Copying image: ${KIMG_PATH} -> ${LINUX_IMAGES_DIR}/qemu-${ARCH}"
+            cp -f "${KIMG_PATH}" "${LINUX_IMAGES_DIR}/qemu-${ARCH}"
             
-            FS_IMAGES_DIR=${LINUX_IMAGES_DIR}/${ARCH:-}
+            FS_IMAGES_DIR=${LINUX_IMAGES_DIR}
             info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${FS_IMAGES_DIR}"
             build_rootfs
         fi
     else
         info "Building Linux: make -j$(nproc) ARCH=${linux_arch} CROSS_COMPILE=${cross_compile} clean"
         make -j"$(nproc)" ARCH="${linux_arch}" CROSS_COMPILE="${cross_compile}" "clean"
+        LINUX_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/linux"
         info "Removing ${LINUX_IMAGES_DIR}/*"
-        rm ${LINUX_IMAGES_DIR}/${ARCH:-}/* || true
+        rm -rf ${LINUX_IMAGES_DIR}/* || true
     fi
 }
 
@@ -177,15 +177,17 @@ build_arceos() {
     popd >/dev/null
 
     if [[ "${make_args}" != *"clean"* ]]; then
-        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR/${ARCH:-}"
-        mkdir -p "$ARCEOS_IMAGES_DIR/${ARCH:-}"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH}"
+        ARCEOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/arceos"
+        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
+        mkdir -p "$ARCEOS_IMAGES_DIR"
+        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/qemu-${ARCH}"
 
-        FS_IMAGES_DIR=${ARCEOS_IMAGES_DIR}/${ARCH:-}
+        FS_IMAGES_DIR=${ARCEOS_IMAGES_DIR}
         info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${FS_IMAGES_DIR}"
         build_rootfs
     else
-        rm -rf $ARCEOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH} || true
+        ARCEOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/arceos"
+        rm -rf $ARCEOS_IMAGES_DIR/qemu-${ARCH} || true
     fi
 }
 
@@ -218,8 +220,9 @@ build_nimbos() {
             popd >/dev/null
         fi
         
-        info "Removing ${NIMBOS_IMAGES_DIR}/${ARCH:-}/*"
-        rm -rf ${NIMBOS_IMAGES_DIR}/${ARCH:-}/* || true
+        NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/nimbos"
+        info "Removing ${NIMBOS_IMAGES_DIR}/*"
+        rm -rf ${NIMBOS_IMAGES_DIR}/* || true
         return 0
     fi
 
@@ -308,11 +311,12 @@ build_nimbos() {
         die "NimbOS binary not found: ${binary_path}"
     fi
 
-    info "Copying build artifacts -> $NIMBOS_IMAGES_DIR/${ARCH:-}"
-    mkdir -p "$NIMBOS_IMAGES_DIR/${ARCH:-}"
+    NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/nimbos"
+    info "Copying build artifacts -> $NIMBOS_IMAGES_DIR"
+    mkdir -p "$NIMBOS_IMAGES_DIR"
     
     info "Found binary: $binary_path"
-    cp "$binary_path" "$NIMBOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH}"
+    cp "$binary_path" "$NIMBOS_IMAGES_DIR/qemu-${ARCH}"
 
     # Build kernel for usertests
     info "Building kernel for usertests: make -C kernel build ARCH=${ARCH} USER_ENTRY=usertests"
@@ -324,7 +328,7 @@ build_nimbos() {
     fi
     
     info "Found usertests binary: $binary_path"
-    cp "$binary_path" "$NIMBOS_IMAGES_DIR/${ARCH:-}/qemu-${ARCH}_usertests"
+    cp "$binary_path" "$NIMBOS_IMAGES_DIR/qemu-${ARCH}_usertests"
 
     popd >/dev/null
 
@@ -366,15 +370,18 @@ build_axvm_bios_x86() {
         die "axvm-bios.bin not found: ${bios_bin}"
     fi
 
-    info "Copying axvm-bios.bin -> $NIMBOS_IMAGES_DIR/x86_64/"
-    cp "$bios_bin" "$NIMBOS_IMAGES_DIR/x86_64/axvm-bios.bin"
+    NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/x86_64/nimbos"
+    mkdir -p "$NIMBOS_IMAGES_DIR"
+    info "Copying axvm-bios.bin -> $NIMBOS_IMAGES_DIR/"
+    cp "$bios_bin" "$NIMBOS_IMAGES_DIR/axvm-bios.bin"
     
     success "axvm-bios-x86 build completed successfully"
 }
 
 create_nimbos_disk_image() {
-    local disk_image_path="${NIMBOS_IMAGES_DIR}/${ARCH:-}/nimbos-${ARCH}.img"
-    local nimbos_binary="${NIMBOS_IMAGES_DIR}/${ARCH:-}/qemu-${ARCH}_usertests"
+    NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/nimbos"
+    local disk_image_path="${NIMBOS_IMAGES_DIR}/rootfs.img"
+    local nimbos_binary="${NIMBOS_IMAGES_DIR}/qemu-${ARCH}_usertests"
     local mount_point="${BUILD_DIR}/nimbos_mount_${ARCH}"
     
     # Check if nimbos binary exists
