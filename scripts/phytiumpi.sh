@@ -14,6 +14,7 @@ LINUX_SRC_DIR="${BUILD_DIR}/phytium-pi-os"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/phytiumpi"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/arceos"
+RTTHREAD_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/rtthread"
 
 # Output help information
 usage() {
@@ -26,6 +27,7 @@ usage() {
     printf '  all                               Build Linux and ArceOS (default)\n'
     printf '  linux                             Build only the Linux system\n'
     printf '  arceos                            Build only the ArceOS system\n'
+    printf '  rtthread                          Build only the RT-Thread system\n'
     printf '  help, -h, --help                  Display this help information\n'
     printf '  clean                             Clean build output artifacts\n'
     printf '\n'
@@ -81,6 +83,11 @@ arceos() {
     bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn "$ARCEOS_IMAGES_DIR" phytiumpi $@
 }
 
+rtthread() {
+    info "Building RT-Thread using common rtthread.sh script"
+    bash "${SCRIPT_DIR}/rtthread.sh" phytiumpi "--bin-dir" "$RTTHREAD_IMAGES_DIR" "--bin-name" "phytiumpi" $@
+}
+
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift || true
@@ -95,10 +102,15 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         arceos)
             arceos "$@"
             ;;
+        rtthread)
+            rtthread "$@"
+            ;;
         all)
             linux "$@"
 
             arceos "$@"
+
+            rtthread "$@"
             ;;
         clean)
             linux "clean"
