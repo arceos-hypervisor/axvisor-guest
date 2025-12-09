@@ -8,21 +8,16 @@ BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
-# Repository URLs
-ORANGEPI_LINUX_REPO_URL="https://github.com/orangepi-xunlong/orangepi-build.git"
-ORANGEPI_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
-
-# Directory configuration
+# Repository and directory configuration
+LINUX_REPO_URL="https://github.com/orangepi-xunlong/orangepi-build.git"
 LINUX_SRC_DIR="${BUILD_DIR}/orangepi"
-ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/orangepi"
-ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/arceos"
 
 # Output help information
 usage() {
-    printf 'Build script for Phytium development board Linux & ArceOS\n'
+    printf 'Build script for orangepi-5-plus development board Linux & ArceOS\n'
     printf '\n'
     printf 'Usage:\n'
     printf '  scripts/orangepi.sh <command> [options]\n'
@@ -37,13 +32,9 @@ usage() {
     printf 'Options:\n'
     printf '  Optional, all options will be directly passed to the specific build system\n'
     printf '\n'
-    printf 'Environment Variables:\n'
-    printf '  ORANGEPI_LINUX_REPO_URL            Linux repository URL\n'
-    printf '  ORANGEPI_ARCEOS_REPO_URL           ArceOS repository URL\n'
-    printf '\n'
     printf 'Examples:\n'
-    printf '  scripts/orangepi.sh all          # Build everything\n'
-    printf '  scripts/orangepi.sh linux        # Build only Linux\n'
+    printf '  scripts/orangepi.sh all           # Build everything\n'
+    printf '  scripts/orangepi.sh linux         # Build only Linux\n'
 }
 
 build_linux() {
@@ -67,8 +58,8 @@ build_linux() {
 }
 
 linux() {
-    info "Cloning Linux source repository $ORANGEPI_LINUX_REPO_URL -> $LINUX_SRC_DIR"
-    clone_repository "$ORANGEPI_LINUX_REPO_URL" "$LINUX_SRC_DIR"
+    info "Cloning Linux source repository $LINUX_REPO_URL -> $LINUX_SRC_DIR"
+    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
     
     info "Applying patches..."
     apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
@@ -77,34 +68,9 @@ linux() {
     build_linux "$@"
 }
 
-build_arceos() {
-    pushd "$ARCEOS_SRC_DIR" >/dev/null
-    info "Cleaning old build files: make clean"
-    make clean || true
-
-    local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
-    info "Starting compilation: make $make_args"
-    make $make_args
-    popd >/dev/null
-
-    if [[ "${make_args}" != *"clean"* ]]; then
-        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
-        mkdir -p "$ARCEOS_IMAGES_DIR"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/orangepi-5-plus"
-    else
-        rm -rf $ARCEOS_IMAGES_DIR/orangepi-5-plus || true
-    fi
-}
-
 arceos() {
-    info "Cloning ArceOS source repository $ORANGEPI_ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
-    clone_repository "$ORANGEPI_ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-    info "Applying patches..."
-    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-    info "Starting to build the ArceOS system..."
-    build_arceos "$@"
+    info "Building ArceOS using common arceos.sh script"
+    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn "$ARCEOS_IMAGES_DIR" orangepi-5-plus $@
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

@@ -8,15 +8,10 @@ BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
-# Repository URLs
-PHYTIUM_LINUX_REPO_URL="https://gitee.com/phytium_embedded/phytium-pi-os.git"
-PHYTIUM_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
-
-# Directory configuration
+# Repository and directory configuration
+LINUX_REPO_URL="https://gitee.com/phytium_embedded/phytium-pi-os.git"
 LINUX_SRC_DIR="${BUILD_DIR}/phytium-pi-os"
-ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/phytiumpi"
-ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/arceos"
 
@@ -36,10 +31,6 @@ usage() {
     printf '\n'
     printf 'Options:\n'
     printf '  Optional, all options will be directly passed to the specific build system\n'
-    printf '\n'
-    printf 'Environment Variables:\n'
-    printf '  PHYTIUM_LINUX_REPO_URL            Linux repository URL\n'
-    printf '  PHYTIUM_ARCEOS_REPO_URL           ArceOS repository URL\n'
     printf '\n'
     printf 'Examples:\n'
     printf '  scripts/phytiumpi.sh all          # Build everything\n'
@@ -75,8 +66,8 @@ build_linux() {
 }
 
 linux() {
-    info "Cloning Linux source repository $PHYTIUM_LINUX_REPO_URL -> $LINUX_SRC_DIR"
-    clone_repository "$PHYTIUM_LINUX_REPO_URL" "$LINUX_SRC_DIR"
+    info "Cloning Linux source repository $LINUX_REPO_URL -> $LINUX_SRC_DIR"
+    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
     
     info "Applying patches..."
     apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
@@ -85,34 +76,9 @@ linux() {
     build_linux "$@"
 }
 
-build_arceos() {
-    pushd "$ARCEOS_SRC_DIR" >/dev/null
-    info "Cleaning old build files: make clean"
-    make clean || true
-
-    local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
-    info "Starting compilation: make $make_args"
-    make $make_args
-    popd >/dev/null
-
-    if [[ "${make_args}" != *"clean"* ]]; then
-        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
-        mkdir -p "$ARCEOS_IMAGES_DIR"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/phytiumpi"
-    else
-        rm -rf $ARCEOS_IMAGES_DIR/phytiumpi || true
-    fi
-}
-
 arceos() {
-    info "Cloning ArceOS source repository $PHYTIUM_ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
-    clone_repository "$PHYTIUM_ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-    info "Applying patches..."
-    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-    info "Starting to build the ArceOS system..."
-    build_arceos "$@"
+    info "Building ArceOS using common arceos.sh script"
+    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn "$ARCEOS_IMAGES_DIR" phytiumpi $@
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

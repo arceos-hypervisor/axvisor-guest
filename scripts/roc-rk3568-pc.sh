@@ -8,15 +8,10 @@ BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
-# Repository URLs
-ROC_RK3568_LINUX_REPO_URL=""
-ROC_RK3568_ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
-
-# Directory configuration
+# Repository and directory configuration
+LINUX_REPO_URL=""
 LINUX_SRC_DIR="${BUILD_DIR}/roc-rk3568-pc"
-ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/roc-rk3568-pc"
-ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/roc-rk3568-pc/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/roc-rk3568-pc/arceos"
 
@@ -36,10 +31,6 @@ usage() {
     printf '\n'
     printf 'Options:\n'
     printf '  Optional, all options will be directly passed to the specific build system\n'
-    printf '\n'
-    printf 'Environment Variables:\n'
-    printf '  ROC_RK3568_LINUX_REPO_URL         Linux repository URL\n'
-    printf '  ROC_RK3568_ARCEOS_REPO_URL        ArceOS repository URL\n'
     printf '\n'
     printf 'Examples:\n'
     printf '  scripts/roc-rk3568-pc.sh all      # Build everything\n'
@@ -119,34 +110,9 @@ linux() {
     build_linux "$@"
 }
 
-build_arceos() {
-    pushd "$ARCEOS_SRC_DIR" >/dev/null
-    info "Cleaning old build files: make clean"
-    make clean || true
-
-    local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=axplat-aarch64-dyn APP_FEATURES=aarch64-dyn LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
-    info "Starting compilation: make $make_args"
-    make $make_args
-    popd >/dev/null
-
-    if [[ "${make_args}" != *"clean"* ]]; then
-        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
-        mkdir -p "$ARCEOS_IMAGES_DIR"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_aarch64-dyn.bin" "$ARCEOS_IMAGES_DIR/roc-rk3568-pc"
-    else
-        rm -rf $ARCEOS_IMAGES_DIR/roc-rk3568-pc || true
-    fi
-}
-
 arceos() {
-    info "Cloning ArceOS source repository $ROC_RK3568_ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
-    clone_repository "$ROC_RK3568_ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-    info "Applying patches..."
-    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-    info "Starting to build the ArceOS system..."
-    build_arceos "$@"
+    info "Building ArceOS using common arceos.sh script"
+    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn "$ARCEOS_IMAGES_DIR" roc-rk3568-pc $@
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

@@ -8,19 +8,16 @@ BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 source $SCRIPT_DIR/utils.sh
 
 # Repository URLs
-LINUX_REPO_URL="https://github.com/torvalds/linux.git"
-ARCEOS_REPO_URL="https://github.com/arceos-hypervisor/arceos.git"
-NIMBOS_REPO_URL="https://github.com/arceos-hypervisor/nimbos.git"
-AXVM_BIOS_X86_REPO_URL="https://github.com/arceos-hypervisor/axvm-bios-x86.git"
 
 # Source directories
+LINUX_REPO_URL="https://github.com/torvalds/linux.git"
 LINUX_SRC_DIR="${BUILD_DIR}/qemu_linux"
-ARCEOS_SRC_DIR="${BUILD_DIR}/arceos"
 NIMBOS_SRC_DIR="${BUILD_DIR}/nimbos"
-AXVM_BIOS_X86_SRC_DIR="${BUILD_DIR}/axvm-bios-x86"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/qemu"
-ARCEOS_PATCH_DIR="${ROOT_DIR}/patches/arceos"
 IMAGES_BASE_DIR="${ROOT_DIR}/IMAGES/qemu"
+AXVM_BIOS_X86_SRC_DIR="${BUILD_DIR}/axvm-bios-x86"
+NIMBOS_REPO_URL="https://github.com/arceos-hypervisor/nimbos.git"
+AXVM_BIOS_X86_REPO_URL="https://github.com/arceos-hypervisor/axvm-bios-x86.git"
 FS_IMAGES_DIR="${ROOT_DIR}/IMAGES/fs"
 
 # Display help information
@@ -47,12 +44,6 @@ usage() {
     printf '\n'
     printf 'Options:\n'
     printf '  Optional, all options will be directly passed to the specific build system\n'
-    printf '\n'
-    printf 'Environment Variables:\n'
-    printf '  LINUX_REPO_URL                    Linux repository URL\n'
-    printf '  ARCEOS_REPO_URL                   ArceOS repository URL\n'
-    printf '  NIMBOS_REPO_URL                   NimbOS repository URL\n'
-    printf '  AXVM_BIOS_X86_REPO_URL            axvm-bios-x86 repository URL (for x86_64 ArceOS)\n'
     printf '\n'
     printf 'Examples:\n'
     printf '  scripts/qemu.sh aarch64 linux     # Build ARM64 Linux\n'
@@ -144,62 +135,33 @@ linux() {
     build_linux "$@"
 }
 
-build_arceos() {
+arceos() {
     case "${ARCH}" in
         aarch64)
-            local platform="axplat-aarch64-dyn"
-            local app_features="aarch64-dyn"
+            local platform="aarch64-dyn"
             ;;
         riscv64)
-            local platform="axplat-riscv64-qemu-virt"
-            local app_features="riscv64-qemu-virt"
+            local platform="riscv64-qemu-virt"
             ;;
         x86_64)
-            local platform="axplat-x86-pc"
-            local app_features="x86-pc"
+            local platform="x86-pc"
             ;;
         *)
             die "Unsupported ArceOS architecture: ${ARCH}"
             ;;
     esac
 
-    pushd "$ARCEOS_SRC_DIR" >/dev/null
-    info "Cleaning old build files: make clean"
-    make clean || true
-
-    if [ "${ARCH}" == "aarch64" ]; then
-        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features LD_SCRIPT=link.x FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
-    else
-        local make_args="A=examples/helloworld-myplat LOG=info MYPLAT=$platform APP_FEATURES=$app_features FEATURES=driver-dyn,page-alloc-4g,paging SMP=1 $@"
-    fi
-    info "Starting compilation: make $make_args"
-    make $make_args
-    popd >/dev/null
-
-    if [[ "${make_args}" != *"clean"* ]]; then
-        ARCEOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/arceos"
-        info "Copying build artifacts -> $ARCEOS_IMAGES_DIR"
-        mkdir -p "$ARCEOS_IMAGES_DIR"
-        cp "$ARCEOS_SRC_DIR/examples/helloworld-myplat/helloworld-myplat_$app_features.bin" "$ARCEOS_IMAGES_DIR/qemu-${ARCH}"
-
+    ARCEOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/arceos"
+    info "Building ArceOS using common arceos.sh script for platform: $platform -> $ARCEOS_IMAGES_DIR"
+    
+    # Call the arceos.sh script with proper parameters
+    bash "${SCRIPT_DIR}/arceos.sh" "$platform" "$ARCEOS_IMAGES_DIR" "qemu-${ARCH}" "$@"
+    
+    if [[ "$@" != *"clean"* ]]; then
         FS_IMAGES_DIR=${ARCEOS_IMAGES_DIR}
         info "Creating root filesystem: ${SCRIPT_DIR}/mkfs.sh -> ${FS_IMAGES_DIR}"
         build_rootfs
-    else
-        ARCEOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/arceos"
-        rm -rf $ARCEOS_IMAGES_DIR/qemu-${ARCH} || true
     fi
-}
-
-arceos() {
-    info "Cloning ArceOS source repository $ARCEOS_REPO_URL -> $ARCEOS_SRC_DIR"
-    clone_repository "$ARCEOS_REPO_URL" "$ARCEOS_SRC_DIR"
-
-    info "Applying patches..."
-    apply_patches "$ARCEOS_PATCH_DIR" "$ARCEOS_SRC_DIR"
-
-    info "Starting to build ArceOS system..."
-    build_arceos "$@"
 }
 
 build_nimbos() {
