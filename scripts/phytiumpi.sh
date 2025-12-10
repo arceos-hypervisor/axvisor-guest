@@ -116,6 +116,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             linux "clean"
 
             arceos "clean"
+
+            rtthread "clean"
             ;;
         *)
             die "Unknown command: $cmd" >&2

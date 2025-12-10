@@ -14,8 +14,8 @@ RTTHREAD_SRC_DIR="${RTTHREAD_SRC_DIR:-${BUILD_DIR}/rtthread}"
 RTTHREAD_PATCH_DIR="${RTTHREAD_PATCH_DIR:-${ROOT_DIR}/patches/rtthread}"
 
 # Global variables for parsed arguments
-RTTHREAD_PLATFORM=""
 RTTHREAD_PLATFORM_DIR=""
+RTTHREAD_PLATFORM_BIN_NAME=""
 RTTHREAD_BIN_DIR="IMAGES/rtthread"
 RTTHREAD_BIN_NAME="rtthread"
 RTTHREAD_ARGS=""
@@ -24,10 +24,13 @@ rtthread_usage() {
     printf 'RT-Thread build script for various platforms\n'
     printf '\n'
     printf 'Usage:\n'
-    printf '  scripts/rtthread.sh [options] <platform>\n'
+    printf '  scripts/rtthread.sh <command> [options]\n'
     printf '\n'
-    printf '<platform>:                     Target platform\n'
-    printf '  phytiumpi                     PhytiumPi\n'
+    printf '<command>:                      \n'
+    printf '  phytiumpi                     build for PhytiumPi\n'
+    printf '  roc-rk3568-pc                 build for ROC-RK3568-PC\n'
+    printf '  all                           build all supported board\n'
+    printf '  clean                         Clean all supported board\n'
     printf '  help, -h, --help              Display this help information\n'
     printf '\n'
     printf '[options]:\n'
@@ -36,7 +39,9 @@ rtthread_usage() {
     printf '  --patch-dir <dir>             Patch directory (default: patches/rtthread)\n'
     printf '  --bin-dir <name>              Output binary directory(default: IMAGES/rtthread/rtthread)\n'
     printf '  --bin-name <name>             Output binary name\n'
-    printf '  --clean|-c                    clean\n'
+    printf '  The other options will be directly passed to the ththread build system. for example:\n'
+    printf '     -h, --help                 Print defined help message of ththread build system\n'
+    printf '     -c, --clean               clean for specific board\n'
     printf '\n'
     printf 'Environment Variables:\n'
     printf '  RTTHREAD_REPO_URL             RT-Thread repository URL\n'
@@ -44,26 +49,13 @@ rtthread_usage() {
     printf '  RTTHREAD_PATCH_DIR            RT-Thread patch directory\n'
     printf '\n'
     printf 'Examples:\n'
-    printf '  scripts/rtthread.sh --bin-name rt.bin phytiumpi\n'
-    printf '  scripts/rtthread.sh -c phytiumpi\n'
+    printf '  scripts/rtthread.sh phytiumpi --bin-name rt.bin\n'
+    printf '  scripts/rtthread.sh roc-rk3568-pc -c\n'
 }
 
 rtthread_parse_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
-            help|-h|--help)
-                rtthread_usage
-                exit 0
-                ;;
-           phytiumpi)
-                RTTHREAD_PLATFORM="$1"
-                RTTHREAD_PLATFORM_DIR="$RTTHREAD_SRC_DIR/bsp/phytium/aarch64"
-                shift 1
-                ;;
-            --clean|-c)
-                RTTHREAD_ARGS="$RTTHREAD_ARGS -c"
-                shift 1
-                ;;
             --repo-url)
                 RTTHREAD_REPO_URL="$2"
                 shift 2
@@ -102,7 +94,7 @@ rtthread_build() {
     if [[ "${RTTHREAD_ARGS}" != *"-c"* ]]; then
         info "Copying build artifacts: $RTTHREAD_PLATFORM_DIR/rtthread_a64.bin -> $RTTHREAD_BIN_DIR/$RTTHREAD_BIN_NAME"
         mkdir -p "${RTTHREAD_BIN_DIR}"
-        cp "${RTTHREAD_PLATFORM_DIR}/rtthread_a64.bin" "${RTTHREAD_BIN_DIR}/$RTTHREAD_BIN_NAME"
+        cp "${RTTHREAD_PLATFORM_DIR}/$RTTHREAD_PLATFORM_BIN_NAME" "${RTTHREAD_BIN_DIR}/$RTTHREAD_BIN_NAME"
     else
         info "Cleaning build artifacts in $RTTHREAD_BIN_DIR"
         rm -rf "${RTTHREAD_BIN_DIR}" || true
@@ -114,27 +106,51 @@ rtthread() {
         info "Cloning RT-Thread source repository $RTTHREAD_REPO_URL -> $RTTHREAD_SRC_DIR"
         clone_repository "$RTTHREAD_REPO_URL" "$RTTHREAD_SRC_DIR"
 
-        info "Applying patches..."
-        apply_patches "$RTTHREAD_PATCH_DIR" "$RTTHREAD_SRC_DIR"
+        if [[ -d "$RTTHREAD_PATCH_DIR" ]]; then
+            info "Applying patches..."
+            apply_patches "$RTTHREAD_PATCH_DIR" "$RTTHREAD_SRC_DIR"
+        fi
     fi
 
     rtthread_build
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    if [[ $# -eq 0 ]]; then
-        rtthread_usage
-        exit 0
-    fi
+    cmd="${1:-}"
+    shift || true
+    case "$cmd" in
+        ""|-h|--help|help)
+            rtthread_usage
+            exit 0
+            ;;
+        phytiumpi)
+            RTTHREAD_PLATFORM_DIR="$RTTHREAD_SRC_DIR/bsp/phytium/aarch64"
+            RTTHREAD_PLATFORM_BIN_NAME="rtthread_a64.bin"
+            ;;
+        roc-rk3568-pc)
+            RTTHREAD_PLATFORM_DIR="$RTTHREAD_SRC_DIR/bsp/rockchip/rk3568"
+            RTTHREAD_PLATFORM_BIN_NAME="rtthread.bin"
+            ;;
+        all)
+            for arch in phytiumpi roc-rk3568-pc; do
+                "$0" "$arch" "$@" || { echo "[ERROR] $arch build failed" >&2; exit 1; }
+            done
+            exit 0
+            ;;
+        clean)
+            for arch in phytiumpi roc-rk3568-pc; do
+                echo "111111111111111111111111111111 clean for  $arch"
+                "$0" "$arch" "-c" || { echo "[ERROR] $arch build failed" >&2; exit 1; }
+            done
+            exit 0
+            ;;
+        *)
+            die "Unknown command: $cmd" >&2
+            ;;
+    esac
 
-    # Parse arguments using the dedicated function
+    # Parse the other arguments
     rtthread_parse_args "$@"
-
-    if [[ -z "$RTTHREAD_PLATFORM" ]]; then
-        printf 'Error: No platform specified.\n\n'
-        rtthread_usage
-        exit 1
-    fi
 
     # Call the main function
     rtthread
