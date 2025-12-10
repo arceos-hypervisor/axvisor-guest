@@ -80,7 +80,7 @@ linux() {
 
 arceos() {
     info "Building ArceOS using common arceos.sh script"
-    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn "$ARCEOS_IMAGES_DIR" phytiumpi $@
+    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name phytiumpi $@
 }
 
 rtthread() {

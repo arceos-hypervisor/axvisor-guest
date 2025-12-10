@@ -151,7 +151,7 @@ arceos() {
     info "Building ArceOS using common arceos.sh script for platform: $platform -> $ARCEOS_IMAGES_DIR"
     
     # Call the arceos.sh script with proper parameters
-    bash "${SCRIPT_DIR}/arceos.sh" "$platform" "$ARCEOS_IMAGES_DIR" "qemu-${ARCH}" "$@"
+    bash "${SCRIPT_DIR}/arceos.sh" "$platform" --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name "qemu-${ARCH}" "$@"
     
     if [[ "$@" != *"clean"* ]]; then
         FS_IMAGES_DIR=${ARCEOS_IMAGES_DIR}

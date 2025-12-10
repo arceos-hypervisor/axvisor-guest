@@ -109,7 +109,7 @@ linux() {
 
 arceos() {
     info "Building ArceOS using common arceos.sh script"
-    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn "$ARCEOS_IMAGES_DIR" evm3588_arceos $@
+    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name evm3588_arceos $@
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

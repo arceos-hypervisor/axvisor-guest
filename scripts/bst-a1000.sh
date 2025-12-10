@@ -74,7 +74,7 @@ linux() {
 
 arceos() {
     info "Building ArceOS using common arceos.sh script"
-    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn "$ARCEOS_IMAGES_DIR" bst-a1000 $@
+    bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name bst-a1000 $@
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
