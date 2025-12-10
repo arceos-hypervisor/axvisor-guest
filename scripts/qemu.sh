@@ -162,7 +162,7 @@ arceos() {
 
 nimbos() {
     # Call the nimbos.sh script with proper parameters
-    bash "${SCRIPT_DIR}/nimbos.sh" "$ARCH" "$@"
+    bash "${SCRIPT_DIR}/nimbos.sh" "$ARCH" "--images-dir" "$IMAGES_BASE_DIR" "$@"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

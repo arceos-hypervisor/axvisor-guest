@@ -7,70 +7,110 @@ BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
-# Repository URLs
-NIMBOS_SRC_DIR="${BUILD_DIR}/nimbos"
-IMAGES_BASE_DIR="${ROOT_DIR}/IMAGES/qemu"
-AXVM_BIOS_X86_SRC_DIR="${BUILD_DIR}/axvm-bios-x86"
-NIMBOS_REPO_URL="https://github.com/arceos-hypervisor/nimbos.git"
-AXVM_BIOS_X86_REPO_URL="https://github.com/arceos-hypervisor/axvm-bios-x86.git"
+# Default values
+NIMBOS_REPO_URL="${NIMBOS_REPO_URL:-https://github.com/arceos-hypervisor/nimbos.git}"
+NIMBOS_SRC_DIR="${NIMBOS_SRC_DIR:-${BUILD_DIR}/nimbos}"
+AXVM_BIOS_X86_REPO_URL="${AXVM_BIOS_X86_REPO_URL:-https://github.com/arceos-hypervisor/axvm-bios-x86.git}"
+AXVM_BIOS_X86_SRC_DIR="${AXVM_BIOS_X86_SRC_DIR:-${BUILD_DIR}/axvm-bios-x86}"
 
-# Display help information
-usage() {
-    printf 'Build script for NimbOS\n'
+# Global variables for parsed arguments
+NIMBOS_PLATFORM=""
+NIMBOS_ARGS=""
+NIMBOS_IMAGES_DIR="$ROOT_DIR/IMAGES/nimbos"
+
+nimbos_usage() {
+    printf 'NimbOS build script for various platforms\n'
     printf '\n'
     printf 'Usage:\n'
-    printf '  scripts/nimbos.sh <architecture> [options]\n'
+    printf '  scripts/nimbos.sh <command> [options]\n'
     printf '\n'
-    printf 'Architectures:\n'
-    printf '  aarch64                           Build for AArch64 architecture\n'
-    printf '  x86_64                            Build for x86_64 architecture\n'
-    printf '  riscv64                           Build for RISC-V architecture\n'
+    printf '<command>:\n'
+    printf '  aarch64                           Build for aarch64 platform\n'
+    printf '  x86_64                            Build for x86_64 platform\n'
+    printf '  riscv64                           Build for riscv64 platform\n'
+    printf '  all                               Build all supported platforms\n'
+    printf '  clean                             Clean all supported platforms\n'
     printf '  help, -h, --help                  Display this help information\n'
-    printf '  clean                             Clean build output artifacts\n'
     printf '\n'
-    printf 'Options:\n'
-    printf '  Optional, all options will be directly passed to the build system\n'
+    printf '[options]:\n'
+    printf '  --repo-url <url>                  NimbOS repository URL (default: https://github.com/arceos-hypervisor/nimbos.git)\n'
+    printf '  --src-dir <dir>                   Source directory (default: build/nimbos)\n'
+    printf '  --bios-repo-url <url>             AXVM BIOS repository URL (default: https://github.com/arceos-hypervisor/axvm-bios-x86.git)\n'
+    printf '  --bios-src-dir <dir>              AXVM BIOS source directory (default: build/axvm-bios-x86)\n'
+    printf '  --images-dir <dir>                Output images directory (default: IMAGES/nimbos)\n'
+    printf '  The other options will be directly passed to the make build system. for example:\n'
+    printf '     clean                          Clean for specific platform\n'
+    printf '\n'
+    printf 'Environment Variables:\n'
+    printf '  NIMBOS_REPO_URL                   NimbOS repository URL\n'
+    printf '  NIMBOS_SRC_DIR                    NimbOS source directory\n'
+    printf '  AXVM_BIOS_X86_REPO_URL            AXVM BIOS repository URL\n'
+    printf '  AXVM_BIOS_X86_SRC_DIR             AXVM BIOS source directory\n'
     printf '\n'
     printf 'Examples:\n'
-    printf '  scripts/nimbos.sh aarch64         # Build ARM64 NimbOS\n'
-    printf '  scripts/nimbos.sh x86_64 clean    # Clean x86_64 NimbOS build\n'
+    printf '  scripts/nimbos.sh aarch64\n'
+    printf '  scripts/nimbos.sh x86_64 clean\n'
+}
+
+nimbos_parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --repo-url)
+                NIMBOS_REPO_URL="$2"
+                shift 2
+                ;;
+            --src-dir)
+                NIMBOS_SRC_DIR="$2"
+                shift 2
+                ;;
+            --bios-repo-url)
+                AXVM_BIOS_X86_REPO_URL="$2"
+                shift 2
+                ;;
+            --bios-src-dir)
+                AXVM_BIOS_X86_SRC_DIR="$2"
+                shift 2
+                ;;
+            --images-dir)
+                NIMBOS_IMAGES_DIR="$2"
+                shift 2
+                ;;
+            *)
+                NIMBOS_ARGS="$NIMBOS_ARGS $1"
+                shift
+                ;;
+        esac
+    done
 }
 
 build_nimbos() {
     # Check if clean command
-    if [[ "$@" == *"clean"* ]]; then
+    if [[ "$NIMBOS_ARGS" == *"clean"* ]]; then
         pushd "$NIMBOS_SRC_DIR" >/dev/null
         info "Cleaning NimbOS: make -C kernel clean"
-        make -C kernel clean ARCH="${ARCH}" || true
+        make -C kernel clean ARCH="${NIMBOS_PLATFORM}" || true
         info "Cleaning user: make -C user clean"
-        make -C user clean ARCH="${ARCH}" || true
+        make -C user clean ARCH="${NIMBOS_PLATFORM}" || true
         popd >/dev/null
         
         # Clean BIOS for x86_64
-        if [ "${ARCH}" == "x86_64" ] && [ -d "$AXVM_BIOS_X86_SRC_DIR" ]; then
+        if [ "${NIMBOS_PLATFORM}" == "x86_64" ] && [ -d "$AXVM_BIOS_X86_SRC_DIR" ]; then
             pushd "$AXVM_BIOS_X86_SRC_DIR" >/dev/null
             info "Cleaning AXVM BIOS: make clean"
             make clean || true
             popd >/dev/null
         fi
         
-        NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/nimbos"
         info "Removing ${NIMBOS_IMAGES_DIR}/*"
         rm -rf ${NIMBOS_IMAGES_DIR}/* || true
         return 0
     fi
 
-    # Verify architecture support
-    case "${ARCH}" in
-        x86_64|aarch64|riscv64)
-            ;;
-        *)
-            die "Unsupported NimbOS architecture: ${ARCH}"
-            ;;
-    esac
+    NIMBOS_IMAGES_DIR="${NIMBOS_IMAGES_DIR}/${NIMBOS_PLATFORM}"
+    mkdir -p "$NIMBOS_IMAGES_DIR"
 
     # Build axvm-bios-x86 for x86_64 architecture
-    if [ "${ARCH}" == "x86_64" ]; then
+    if [ "${NIMBOS_PLATFORM}" == "x86_64" ]; then
         info "Building axvm-bios-x86 for x86_64..."
         axvm_bios_x86
     fi
@@ -80,7 +120,7 @@ build_nimbos() {
     # Install musl toolchain
     local musl_prefix=""
     local musl_path=""
-    case "${ARCH}" in
+    case "${NIMBOS_PLATFORM}" in
         x86_64)
             musl_prefix="x86_64-linux-musl"
             musl_path="x86_64-linux-musl-cross"
@@ -100,7 +140,7 @@ build_nimbos() {
         warn "musl toolchain ${musl_prefix}-gcc not found in PATH"
         
         # Try to download and install musl toolchain
-        local musl_dir="${BUILD_DIR}/musl-${ARCH}"
+        local musl_dir="${BUILD_DIR}/musl-${NIMBOS_PLATFORM}"
         if [ ! -d "$musl_dir" ]; then
             info "Downloading musl toolchain from https://musl.cc/${musl_path}.tgz"
             
@@ -108,7 +148,7 @@ build_nimbos() {
             if wget -q "https://musl.cc/${musl_path}.tgz"; then
                 info "Extracting musl toolchain..."
                 tar -xf "${musl_path}.tgz"
-                mv "${musl_path}" "musl-${ARCH}"
+                mv "${musl_path}" "musl-${NIMBOS_PLATFORM}"
                 rm -f "${musl_path}.tgz"
                 success "musl toolchain installed to ${musl_dir}"
             else
@@ -127,38 +167,25 @@ build_nimbos() {
     fi
 
     # Build user programs
-    info "Building user programs: make -C user build ARCH=${ARCH}"
-    make -C user build ARCH="${ARCH}" "$@"
+    info "Building user programs: make -C user build ARCH=${NIMBOS_PLATFORM}"
+    make -C user build ARCH="${NIMBOS_PLATFORM}" ${NIMBOS_ARGS}
 
     # Build kernel (standard build)
-    info "Building kernel: make -C kernel build ARCH=${ARCH}"
-    make -C kernel build ARCH="${ARCH}" "$@"
+    info "Building kernel: make -C kernel build ARCH=${NIMBOS_PLATFORM}"
+    make -C kernel build ARCH="${NIMBOS_PLATFORM}" ${NIMBOS_ARGS}
 
     # Copy the standard build binary
-    local binary_path="$NIMBOS_SRC_DIR/kernel/target/${ARCH}/release/nimbos.bin"
-    
-    if [[ ! -f "$binary_path" ]]; then
-        die "NimbOS binary not found: ${binary_path}"
-    fi
-
-    NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/nimbos"
-    info "Copying build artifacts -> $NIMBOS_IMAGES_DIR"
-    mkdir -p "$NIMBOS_IMAGES_DIR"
-    
-    info "Found binary: $binary_path"
-    cp "$binary_path" "$NIMBOS_IMAGES_DIR/qemu-${ARCH}"
+    local binary_path="$NIMBOS_SRC_DIR/kernel/target/${NIMBOS_PLATFORM}/release/nimbos.bin"
+    info "Copying: $binary_path -> $NIMBOS_IMAGES_DIR/qemu-${NIMBOS_PLATFORM}"
+    cp -f "$binary_path" "$NIMBOS_IMAGES_DIR/qemu-${NIMBOS_PLATFORM}"
 
     # Build kernel for usertests
-    info "Building kernel for usertests: make -C kernel build ARCH=${ARCH} USER_ENTRY=usertests"
-    make -C kernel build ARCH="${ARCH}" USER_ENTRY=usertests "$@"
+    info "Building kernel for usertests: make -C kernel build ARCH=${NIMBOS_PLATFORM} USER_ENTRY=usertests"
+    make -C kernel build ARCH="${NIMBOS_PLATFORM}" USER_ENTRY=usertests ${NIMBOS_ARGS}
 
-    # Copy the usertests build binary
-    if [[ ! -f "$binary_path" ]]; then
-        die "NimbOS usertests binary not found: ${binary_path}"
-    fi
-    
-    info "Found usertests binary: $binary_path"
-    cp "$binary_path" "$NIMBOS_IMAGES_DIR/qemu-${ARCH}_usertests"
+    local binary_path="$NIMBOS_SRC_DIR/kernel/target/${NIMBOS_PLATFORM}/release/nimbos.bin"
+    info "Copying: $binary_path -> $NIMBOS_IMAGES_DIR/qemu-${NIMBOS_PLATFORM}"
+    cp -f "$binary_path" "$NIMBOS_IMAGES_DIR/qemu-${NIMBOS_PLATFORM}_usertests"
 
     popd >/dev/null
 
@@ -174,15 +201,13 @@ axvm_bios_x86() {
     clone_repository "$AXVM_BIOS_X86_REPO_URL" "$AXVM_BIOS_X86_SRC_DIR"
 
     info "Starting to build axvm-bios-x86..."
-    build_axvm_bios_x86 "$@"
+    build_axvm_bios_x86 ${NIMBOS_ARGS}
 }
 
 build_axvm_bios_x86() {
     pushd "$AXVM_BIOS_X86_SRC_DIR" >/dev/null
-
     info "Building axvm-bios-x86: make"
     make
-
     popd >/dev/null
 
     # Copy the built BIOS binary
@@ -192,7 +217,6 @@ build_axvm_bios_x86() {
         die "axvm-bios.bin not found: ${bios_bin}"
     fi
 
-    NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/x86_64/nimbos"
     mkdir -p "$NIMBOS_IMAGES_DIR"
     info "Copying axvm-bios.bin -> $NIMBOS_IMAGES_DIR/"
     cp "$bios_bin" "$NIMBOS_IMAGES_DIR/axvm-bios.bin"
@@ -201,10 +225,9 @@ build_axvm_bios_x86() {
 }
 
 create_nimbos_disk_image() {
-    NIMBOS_IMAGES_DIR="${IMAGES_BASE_DIR}/${ARCH}/nimbos"
     local disk_image_path="${NIMBOS_IMAGES_DIR}/rootfs.img"
-    local nimbos_binary="${NIMBOS_IMAGES_DIR}/qemu-${ARCH}_usertests"
-    local mount_point="${BUILD_DIR}/nimbos_mount_${ARCH}"
+    local nimbos_binary="${NIMBOS_IMAGES_DIR}/qemu-${NIMBOS_PLATFORM}_usertests"
+    local mount_point="${BUILD_DIR}/nimbos_mount_${NIMBOS_PLATFORM}"
     
     # Check if nimbos binary exists
     if [ ! -f "$nimbos_binary" ]; then
@@ -231,10 +254,10 @@ create_nimbos_disk_image() {
     sudo mount -o loop "$disk_image_path" "$mount_point"
     
     # Copy NimbOS binary
-    sudo cp "$nimbos_binary" "$mount_point/nimbos-${ARCH}.bin"
+    sudo cp "$nimbos_binary" "$mount_point/nimbos-${NIMBOS_PLATFORM}.bin"
     
     # Copy BIOS for x86_64
-    if [ "${ARCH}" == "x86_64" ] && [ -f "$AXVM_BIOS_X86_SRC_DIR/out/axvm-bios.bin" ]; then
+    if [ "${NIMBOS_PLATFORM}" == "x86_64" ] && [ -f "$AXVM_BIOS_X86_SRC_DIR/out/axvm-bios.bin" ]; then
         info "Copying AXVM BIOS to disk image..."
         sudo cp "$AXVM_BIOS_X86_SRC_DIR/out/axvm-bios.bin" "$mount_point/axvm-bios.bin"
     fi
@@ -254,33 +277,52 @@ create_nimbos_disk_image() {
 }
 
 nimbos() {
-    info "Cloning NimbOS source repository $NIMBOS_REPO_URL -> $NIMBOS_SRC_DIR"
-    clone_repository "$NIMBOS_REPO_URL" "$NIMBOS_SRC_DIR"
+    if [[ "${NIMBOS_ARGS}" != *"clean"* ]]; then
+        info "Cloning NimbOS source repository $NIMBOS_REPO_URL -> $NIMBOS_SRC_DIR"
+        clone_repository "$NIMBOS_REPO_URL" "$NIMBOS_SRC_DIR"
+    fi
 
     info "Starting to build NimbOS system..."
-    build_nimbos "$@"
+    build_nimbos
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
-    shift 1 || true
-    case "${cmd}" in
-        ""|help|-h|--help)
-            usage
+    shift || true
+    case "$cmd" in
+        ""|-h|--help|help)
+            nimbos_usage
             exit 0
             ;;
-        aarch64|riscv64|x86_64)
-            ARCH="$cmd"
-            nimbos "$@"
+        aarch64)
+            NIMBOS_PLATFORM="aarch64"
+            ;;
+        riscv64)
+            NIMBOS_PLATFORM="riscv64"
+            ;;
+        x86_64)
+            NIMBOS_PLATFORM="x86_64"
+            ;;
+        all)
+            for platform in aarch64 riscv64 x86_64; do
+                "$0" "$platform" "$@" || { echo "[ERROR] $platform build failed" >&2; exit 1; }
+            done
+            exit 0
             ;;
         clean)
-            for arch in aarch64 riscv64 x86_64; do
-                ARCH="$arch"
-                nimbos "clean" || { echo "[ERROR] $arch clean failed" >&2; exit 1; }
+            for platform in aarch64 riscv64 x86_64; do
+                "$0" "$platform" "clean" || { echo "[ERROR] $platform build failed" >&2; exit 1; }
             done
+            exit 0
             ;;
         *)
             die "Unknown command: $cmd" >&2
             ;;
     esac
+
+    # Parse the other arguments
+    nimbos_parse_args "$@"
+
+    # Call the main function
+    nimbos
 fi
