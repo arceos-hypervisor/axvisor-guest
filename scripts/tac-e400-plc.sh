@@ -17,20 +17,20 @@ ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/tac-e400-plc/arceos"
 
 # Output help information
 usage() {
-    printf 'Build script for TAC-E400 series intelligent PLC products Linux & ArceOS\n'
+    printf 'Build supported OS for TAC-E400 series intelligent PLC products\n'
     printf '\n'
     printf 'Usage:\n'
     printf '  scripts/tac-e400-plc.sh <command> [options]\n'
     printf '\n'
     printf 'Commands:\n'
-    printf '  all                               Build Linux and ArceOS (default)\n'
+    printf '  all                               Build all supported OS\n'
     printf '  linux                             Build only the Linux system\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  help, -h, --help                  Display this help information\n'
     printf '  clean                             Clean build output artifacts\n'
     printf '\n'
     printf 'Options:\n'
-    printf '  Optional, all options will be directly passed to the specific build system\n'
+    printf '  Optional, all options will be directly passed to the build system of OS\n'
     printf '\n'
     printf 'Examples:\n'
     printf '  scripts/tac-e400-plc.sh all       # Build everything\n'
@@ -38,40 +38,52 @@ usage() {
 }
 
 build_linux() {
-    pushd "$LINUX_SRC_DIR/EDGE_KERNEL" >/dev/null
-    if [[ "$@" != *"clean"* ]]; then
-        info "Configuring kernel: cp "$LINUX_SRC_DIR/.config" .config"
-        cp "$LINUX_SRC_DIR/.config" .config
+    if [[ -d "$LINUX_SRC_DIR" ]]; then
+        pushd "$LINUX_SRC_DIR/EDGE_KERNEL" >/dev/null
+        if [[ "$@" != *"clean"* ]]; then
+            info "Configuring kernel: cp "$LINUX_SRC_DIR/.config" .config"
+            cp "$LINUX_SRC_DIR/.config" .config
 
-        info "Starting compilation: make -j$(nproc) $@"
-        make -j$(nproc) $@ 2>&1
+            info "Starting compilation: make -j$(nproc) $@"
+            make -j$(nproc) $@ 2>&1
 
-        info "Copying build artifacts -> $LINUX_IMAGES_DIR"
-        mkdir -p "$LINUX_IMAGES_DIR"
-        cp "$LINUX_SRC_DIR/EDGE_KERNEL/arch/arm64/boot/Image" "$LINUX_IMAGES_DIR/tac-e400-plc"
-        cp "$LINUX_SRC_DIR/EDGE_KERNEL/arch/arm64/boot/dts/phytium/e2000q-hanwei-board.dtb" "$LINUX_IMAGES_DIR/tac-e400-plc.dtb"
-    else
-        info "Cleaning: make -j$(nproc) clean"
-        make -j$(nproc) clean 2>&1
-        info "Removing ${LINUX_IMAGES_DIR}/*"
-        rm ${LINUX_IMAGES_DIR}/* || true
+            info "Copying build artifacts -> $LINUX_IMAGES_DIR"
+            mkdir -p "$LINUX_IMAGES_DIR"
+            cp "$LINUX_SRC_DIR/EDGE_KERNEL/arch/arm64/boot/Image" "$LINUX_IMAGES_DIR/tac-e400-plc"
+            cp "$LINUX_SRC_DIR/EDGE_KERNEL/arch/arm64/boot/dts/phytium/e2000q-hanwei-board.dtb" "$LINUX_IMAGES_DIR/tac-e400-plc.dtb"
+        else
+            info "Cleaning: make -j$(nproc) clean"
+            make -j$(nproc) clean 2>&1
+            info "Removing ${LINUX_IMAGES_DIR}/*"
+            rm ${LINUX_IMAGES_DIR}/* || true
+        fi
+        popd >/dev/null
     fi
-    popd >/dev/null
 }
 
 linux() {
-    info "Cloning Linux source repository $LINUX_REPO_URL -> $LINUX_SRC_DIR"
-    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
+    if [[ "$@" != *"clean"* ]]; then
+        info "Cloning Linux source repository $LINUX_REPO_URL -> $LINUX_SRC_DIR"
+        clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
+        
+        if [[ -d "$LINUX_PATCH_DIR" ]]; then
+            info "Applying patches..."
+            apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
+        fi
+        info "Building to build the Linux system..."
+    else
+        info "Cleaning the Linux build artifacts..."
+    fi
 
-    info "Applying patches..."
-    apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
-
-    info "Starting to build the Linux system..."
     build_linux "$@"
 }
 
 arceos() {
-    info "Building ArceOS using common arceos.sh script"
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building ArceOS using common arceos.sh script"
+    else
+        info "Cleaning ArceOS using common arceos.sh script"
+    fi
     bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name tac-e400-plc $@
 }
 

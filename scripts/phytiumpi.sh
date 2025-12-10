@@ -18,13 +18,13 @@ RTTHREAD_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/rtthread"
 
 # Output help information
 usage() {
-    printf 'Build script for Phytium development board Linux & ArceOS\n'
+    printf 'Build supported OS for Phytium development board\n'
     printf '\n'
     printf 'Usage:\n'
     printf '  scripts/phytiumpi.sh <command> [options]\n'
     printf '\n'
     printf 'Commands:\n'
-    printf '  all                               Build Linux and ArceOS (default)\n'
+    printf '  all                               Build all supported OS\n'
     printf '  linux                             Build only the Linux system\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  rtthread                          Build only the RT-Thread system\n'
@@ -32,7 +32,7 @@ usage() {
     printf '  clean                             Clean build output artifacts\n'
     printf '\n'
     printf 'Options:\n'
-    printf '  Optional, all options will be directly passed to the specific build system\n'
+    printf '  Optional, all options will be directly passed to the build system of OS\n'
     printf '\n'
     printf 'Examples:\n'
     printf '  scripts/phytiumpi.sh all          # Build everything\n'
@@ -40,46 +40,58 @@ usage() {
 }
 
 build_linux() {
-    pushd "$LINUX_SRC_DIR" >/dev/null
-    if [[ "$@" != *"clean"* ]]; then
-        info "Configuring build: make phytiumpi_desktop_defconfig"
-        make phytiumpi_desktop_defconfig
+    if [[ -d "$LINUX_SRC_DIR" ]]; then
+        pushd "$LINUX_SRC_DIR" >/dev/null
+        if [[ "$@" != *"clean"* ]]; then
+            info "Configuring build: make phytiumpi_desktop_defconfig"
+            make phytiumpi_desktop_defconfig
 
-        info "Starting compilation: make $@"
-        make $@
-        
-        info "Copying build artifacts: $LINUX_SRC_DIR/output/images -> $LINUX_IMAGES_DIR"
-        mkdir -p "$LINUX_IMAGES_DIR"
-        rsync -av --ignore-missing-args "$LINUX_SRC_DIR/output/images/fip-all.bin" \
-        "$LINUX_SRC_DIR/output/images/fitImage" \
-        "$LINUX_SRC_DIR/output/images/kernel.its" \
-        "$LINUX_SRC_DIR/output/images/Image" \
-        "$LINUX_SRC_DIR/output/images/phytiumpi_firefly.dtb" \
-        "$LINUX_IMAGES_DIR/"
-        mv "$LINUX_IMAGES_DIR/phytiumpi_firefly.dtb" "$LINUX_IMAGES_DIR/phytiumpi.dtb"
-        gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/phytiumpi"
-    else
-        info "Cleaning: make $@"
-        make $@
-        info "Removing ${LINUX_IMAGES_DIR}/*"
-        rm ${LINUX_IMAGES_DIR}/* || true
+            info "Starting compilation: make $@"
+            make $@
+            
+            info "Copying build artifacts: $LINUX_SRC_DIR/output/images -> $LINUX_IMAGES_DIR"
+            mkdir -p "$LINUX_IMAGES_DIR"
+            rsync -av --ignore-missing-args "$LINUX_SRC_DIR/output/images/fip-all.bin" \
+            "$LINUX_SRC_DIR/output/images/fitImage" \
+            "$LINUX_SRC_DIR/output/images/kernel.its" \
+            "$LINUX_SRC_DIR/output/images/Image" \
+            "$LINUX_SRC_DIR/output/images/phytiumpi_firefly.dtb" \
+            "$LINUX_IMAGES_DIR/"
+            mv "$LINUX_IMAGES_DIR/phytiumpi_firefly.dtb" "$LINUX_IMAGES_DIR/phytiumpi.dtb"
+            gzip -dc "$LINUX_SRC_DIR/output/images/Image.gz" > "$LINUX_IMAGES_DIR/phytiumpi"
+        else
+            info "Cleaning: make $@"
+            make $@
+            info "Removing ${LINUX_IMAGES_DIR}/*"
+            rm ${LINUX_IMAGES_DIR}/* || true
+        fi
+        popd >/dev/null
     fi
-    popd >/dev/null
 }
 
 linux() {
-    info "Cloning Linux source repository $LINUX_REPO_URL -> $LINUX_SRC_DIR"
-    clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
-    
-    info "Applying patches..."
-    apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
+    if [[ "$@" != *"clean"* ]]; then
+        info "Cloning Linux source repository $LINUX_REPO_URL -> $LINUX_SRC_DIR"
+        clone_repository "$LINUX_REPO_URL" "$LINUX_SRC_DIR"
+        
+        if [[ -d "$LINUX_PATCH_DIR" ]]; then
+            info "Applying patches..."
+            apply_patches "$LINUX_PATCH_DIR" "$LINUX_SRC_DIR"
+        fi
+        info "Building to build the Linux system..."
+    else
+        info "Cleaning the Linux build artifacts..."
+    fi
 
-    info "Starting to build the Linux system..."
     build_linux "$@"
 }
 
 arceos() {
-    info "Building ArceOS using common arceos.sh script"
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building ArceOS using common arceos.sh script"
+    else
+        info "Cleaning ArceOS using common arceos.sh script"
+    fi
     bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name phytiumpi $@
 }
 

@@ -18,13 +18,13 @@ RTTHREAD_IMAGES_DIR="${ROOT_DIR}/IMAGES/roc-rk3568-pc/rtthread"
 
 # Output help information
 usage() {
-    printf 'Build script for ROC-RK3588-PC development board Linux & ArceOS\n'
+    printf 'Build supported OS for ROC-RK3588-PC development board\n'
     printf '\n'
     printf 'Usage:\n'
     printf '  scripts/roc-rk3568-pc.sh <command> [options]\n'
     printf '\n'
     printf 'Commands:\n'
-    printf '  all                               Build Linux and ArceOS (default)\n'
+    printf '  all                               Build all supported OS\n'
     printf '  linux                             Build only the Linux system\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  rtthread                          Build only the RT-Thread system\n'
@@ -32,7 +32,7 @@ usage() {
     printf '  clean                             Clean build output artifacts\n'
     printf '\n'
     printf 'Options:\n'
-    printf '  Optional, all options will be directly passed to the specific build system\n'
+    printf '  Optional, all options will be directly passed to the build system of OS\n'
     printf '\n'
     printf 'Examples:\n'
     printf '  scripts/roc-rk3568-pc.sh all      # Build everything\n'
@@ -102,18 +102,27 @@ build_linux() {
             fi
         fi
 
-        info "Removing ${LINUX_IMAGES_DIR}/*"
-        rm -f ${LINUX_IMAGES_DIR}/* || true
-    fi
+            info "Removing ${LINUX_IMAGES_DIR}/*"
+            rm -f ${LINUX_IMAGES_DIR}/* || true
+        fi
 }
 
 linux() {
-    info "Starting to build the Linux system..."
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building to build the Linux system..."
+    else
+        info "Cleaning the Linux build artifacts..."
+    fi
+
     build_linux "$@"
 }
 
 arceos() {
-    info "Building ArceOS using common arceos.sh script"
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building ArceOS using common arceos.sh script"
+    else
+        info "Cleaning ArceOS using common arceos.sh script"
+    fi
     bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name roc-rk3568-pc $@
 }
 

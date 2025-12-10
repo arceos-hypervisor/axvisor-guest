@@ -18,7 +18,7 @@ FS_IMAGES_DIR="${ROOT_DIR}/IMAGES/fs"
 
 # Display help information
 usage() {
-    printf 'Build script for QEMU Linux & ArceOS & NimbOS\n'
+    printf 'Build supported OS for QEMU\n'
     printf '\n'
     printf 'Usage:\n'
     printf '  scripts/qemu.sh <command> <system> [options]\n'
