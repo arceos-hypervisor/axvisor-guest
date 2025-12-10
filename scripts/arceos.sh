@@ -120,21 +120,23 @@ arceos_build() {
     local log_level=$(get_platform_config "$ARCEOS_PLATFORM" "log_level")
     local app_features=$(get_platform_config "$ARCEOS_PLATFORM" "app_features")
     
-    pushd "$ARCEOS_SRC_DIR" >/dev/null
-    info "EXEC: make clean"
-    make clean || true
+    if [[ -d "$ARCEOS_SRC_DIR" ]]; then
+        pushd "$ARCEOS_SRC_DIR" >/dev/null
+        info "EXEC: make clean"
+        make clean || true
 
-    # Special case for aarch64-dyn platform (needs LD_SCRIPT parameter)
-    if [[ "$ARCEOS_PLATFORM" == "aarch64-dyn" ]]; then
-        local make_cmd="A=examples/helloworld-myplat LOG=$log_level MYPLAT=axplat-$ARCEOS_PLATFORM APP_FEATURES=$app_features LD_SCRIPT=$ld_script FEATURES=$features SMP=$smp $ARCEOS_ARGS"
-        info "EXEC: make $make_cmd"
-        make $make_cmd
-    else
-        local make_cmd="A=examples/helloworld-myplat LOG=$log_level MYPLAT=axplat-$ARCEOS_PLATFORM APP_FEATURES=$app_features FEATURES=$features SMP=$smp $ARCEOS_ARGS"
-        info "EXEC: make $make_cmd"
-        make $make_cmd
+        # Special case for aarch64-dyn platform (needs LD_SCRIPT parameter)
+        if [[ "$ARCEOS_PLATFORM" == "aarch64-dyn" ]]; then
+            local make_cmd="A=examples/helloworld-myplat LOG=$log_level MYPLAT=axplat-$ARCEOS_PLATFORM APP_FEATURES=$app_features LD_SCRIPT=$ld_script FEATURES=$features SMP=$smp $ARCEOS_ARGS"
+            info "EXEC: make $make_cmd"
+            make $make_cmd
+        else
+            local make_cmd="A=examples/helloworld-myplat LOG=$log_level MYPLAT=axplat-$ARCEOS_PLATFORM APP_FEATURES=$app_features FEATURES=$features SMP=$smp $ARCEOS_ARGS"
+            info "EXEC: make $make_cmd"
+            make $make_cmd
+        fi
+        popd >/dev/null
     fi
-    popd >/dev/null
 
     if [[ "${ARCEOS_ARGS}" != *"clean"* ]]; then
         # Set default bin name if not specified

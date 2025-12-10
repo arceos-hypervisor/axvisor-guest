@@ -41,7 +41,7 @@ rtthread_usage() {
     printf '  --bin-name <name>             Output binary name\n'
     printf '  The other options will be directly passed to the ththread build system. for example:\n'
     printf '     -h, --help                 Print defined help message of ththread build system\n'
-    printf '     -c, --clean               clean for specific board\n'
+    printf '     -c, --clean                clean for specific board\n'
     printf '\n'
     printf 'Environment Variables:\n'
     printf '  RTTHREAD_REPO_URL             RT-Thread repository URL\n'
@@ -85,11 +85,13 @@ rtthread_parse_args() {
 }
 
 rtthread_build() {
-    pushd "$RTTHREAD_PLATFORM_DIR" >/dev/null
-    info "EXEC: scons -j$(nproc) $RTTHREAD_ARGS"
-    export RTT_EXEC_PATH="/opt/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-elf/bin"
-    scons -j$(nproc) $RTTHREAD_ARGS
-    popd >/dev/null
+    if [[ -d "$RTTHREAD_PLATFORM_DIR" ]]; then
+        pushd "$RTTHREAD_PLATFORM_DIR" >/dev/null
+        info "EXEC: scons -j$(nproc) $RTTHREAD_ARGS"
+        export RTT_EXEC_PATH="/opt/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-elf/bin"
+        scons -j$(nproc) $RTTHREAD_ARGS
+        popd >/dev/null
+    fi
 
     if [[ "${RTTHREAD_ARGS}" != *"-c"* ]]; then
         info "Copying build artifacts: $RTTHREAD_PLATFORM_DIR/rtthread_a64.bin -> $RTTHREAD_BIN_DIR/$RTTHREAD_BIN_NAME"

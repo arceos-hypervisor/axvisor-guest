@@ -118,8 +118,13 @@ arceos() {
 }
 
 rtthread() {
-    info "Building RT-Thread using common rtthread.sh script"
-    bash "${SCRIPT_DIR}/rtthread.sh" roc-rk3568-pc "--bin-dir" "$RTTHREAD_IMAGES_DIR" "--bin-name" "roc-rk3568-pc" "--patch-dir" "" $@
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building RT-Thread using common rtthread.sh script"
+        bash "${SCRIPT_DIR}/rtthread.sh" roc-rk3568-pc "--bin-dir" "$RTTHREAD_IMAGES_DIR" "--bin-name" "roc-rk3568-pc" $@
+    else
+        info "Cleaning RT-Thread using common rtthread.sh script"
+        bash "${SCRIPT_DIR}/rtthread.sh" roc-rk3568-pc "--bin-dir" "$RTTHREAD_IMAGES_DIR" "--bin-name" "roc-rk3568-pc" "--patch-dir" "" "-c"
+    fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

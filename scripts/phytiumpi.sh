@@ -84,8 +84,13 @@ arceos() {
 }
 
 rtthread() {
-    info "Building RT-Thread using common rtthread.sh script"
-    bash "${SCRIPT_DIR}/rtthread.sh" phytiumpi "--bin-dir" "$RTTHREAD_IMAGES_DIR" "--bin-name" "phytiumpi" $@
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building RT-Thread using common rtthread.sh script"
+        bash "${SCRIPT_DIR}/rtthread.sh" phytiumpi "--bin-dir" "$RTTHREAD_IMAGES_DIR" "--bin-name" "phytiumpi" $@
+    else
+        info "Cleaning RT-Thread using common rtthread.sh script"
+        bash "${SCRIPT_DIR}/rtthread.sh" phytiumpi "--bin-dir" "$RTTHREAD_IMAGES_DIR" "--bin-name" "phytiumpi" "-c"
+    fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
