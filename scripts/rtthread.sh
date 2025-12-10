@@ -139,7 +139,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         clean)
             for arch in phytiumpi roc-rk3568-pc; do
-                echo "111111111111111111111111111111 clean for  $arch"
                 "$0" "$arch" "-c" || { echo "[ERROR] $arch build failed" >&2; exit 1; }
             done
             exit 0
