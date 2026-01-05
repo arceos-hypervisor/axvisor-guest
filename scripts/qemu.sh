@@ -52,7 +52,7 @@ build_rootfs() {
     if [ ! -f "${SCRIPT_DIR}/mkfs.sh" ]; then
         die "Root filesystem script does not exist: ${SCRIPT_DIR}/mkfs.sh"
     fi
-    bash "${SCRIPT_DIR}/mkfs.sh" "${ARCH}" "--dir" "${FS_IMAGES_DIR}"
+    bash "${SCRIPT_DIR}/mkfs.sh" "${ARCH}" "--out_dir" "${FS_IMAGES_DIR}" --guest "./guest"
     success "Root filesystem creation completed"
 }
 

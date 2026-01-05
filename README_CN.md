@@ -89,10 +89,11 @@ scripts/evm3588.sh arceos             # 仅 ArceOS 固件
 
 对于 `evm3588.sh` 与 `roc-rk3568-pc.sh` 会通过 SSH 登录 `10.3.10.194`，执行厂商提供的 SDK 构建脚本并下载产物。建议为该流程准备只读权限的专用账号和 SSH key，必要时通过跳板机限制访问源。
 
-若只需生成最小根文件系统，可单独执行 `scripts/mkfs.sh` 产出 `initramfs.cpio.gz` 和 `rootfs.img`（QEMU 流程会自动调用该脚本）。脚本支持 `--extra-package`、`--apt-mirror` 等参数，可按需追加 BusyBox applets 或 Debian 包，构建更接近目标部署环境的根文件系统：
+若只需生成最小根文件系统，可单独执行 `scripts/mkfs.sh` 产出 `initramfs.cpio.gz` 和 `rootfs.img`（QEMU 流程会自动调用该脚本）。脚本支持 `--out_dir`、`--guest` 等参数，可按需自定义输出目录或添加额外的 guest 文件：
 
 ```bash
-scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
+scripts/mkfs.sh aarch64 --out_dir IMAGES/qemu/linux/aarch64
+scripts/mkfs.sh aarch64 --guest /path/to/guest/files
 ```
 
 ## 镜像

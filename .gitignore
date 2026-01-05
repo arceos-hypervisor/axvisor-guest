@@ -2,6 +2,7 @@
 **/build/
 **/release/
 **/tmp/
+**/guest/
 **/root/
 
 /target

@@ -89,10 +89,11 @@ scripts/evm3588.sh arceos             # ArceOS firmware only
 
 For `evm3588.sh` and `roc-rk3568-pc.sh`, the scripts log in to `10.3.10.194` via SSH, execute the vendor-provided SDK build scripts, and download the artifacts. It is recommended to prepare a dedicated read-only account and SSH key for this process, and restrict access through a bastion host if necessary.
 
-If you only need to generate a minimal root file system, execute `scripts/mkfs.sh` to produce `initramfs.cpio.gz` and `rootfs.img` (the QEMU flow automatically calls this script). The script supports parameters such as `--extra-package` and `--apt-mirror`, allowing you to add BusyBox applets or Debian packages to build a root file system closer to the target deployment environment:
+If you only need to generate a minimal root file system, execute `scripts/mkfs.sh` to produce `initramfs.cpio.gz` and `rootfs.img` (the QEMU flow automatically calls this script). The script supports parameters such as `--out_dir` and `--guest`, allowing you to customize the output directory and include additional guest files:
 
 ```bash
-scripts/mkfs.sh aarch64 --dir IMAGES/qemu/linux/aarch64
+scripts/mkfs.sh aarch64 --out_dir IMAGES/qemu/linux/aarch64
+scripts/mkfs.sh aarch64 --guest /path/to/guest/files
 ```
 
 ## Images

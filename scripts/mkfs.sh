@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)
@@ -7,37 +8,73 @@ BUILD_DIR="$(cd "${ROOT_DIR}" && mkdir -p "build" && cd "build" && pwd -P)"
 
 source $SCRIPT_DIR/utils.sh
 
-BUSYBOX_REPO_URL="git://busybox.net/busybox.git"
-BUSYBOX_SRC_DIR="${BUILD_DIR}/busybox"
-BUSYBOX_PATCH_DIR="${ROOT_DIR}/patches/busybox"
+# Default values
+BUSYBOX_REPO_URL="${BUSYBOX_REPO_URL:-git://busybox.net/busybox.git}"
+BUSYBOX_SRC_DIR="${BUSYBOX_SRC_DIR:-${BUILD_DIR}/busybox}"
+BUSYBOX_PATCH_DIR="${BUSYBOX_PATCH_DIR:-${ROOT_DIR}/patches/busybox}"
 
-usage() {
-    printf '%s\n' 'Generate a filesystem image containing BusyBox and basic device nodes.'
-    printf '%s\n' ''
-    printf '%s\n' 'Usage:'
-    printf '%s\n' "  scripts/mkfs.sh <aarch64|riscv64|x86_64> --dir|-d <out_dir>"
-    printf '%s\n' "  scripts/mkfs.sh -h|--help|help"
-    printf '%s\n' ''
-    printf '%s\n' 'Commands:'
-    printf '%s\n' '  help            Show this help and exit'
-    printf '%s\n' '  aarch64         Build minimal filesystem for aarch64 (cross-compile BusyBox, pack images)'
-    printf '%s\n' '  riscv64         Build minimal filesystem for riscv64 (cross-compile BusyBox, pack images)'
-    printf '%s\n' '  x86_64          Build minimal filesystem for x86_64 (native BusyBox build, pack images)'
-    printf '%s\n' ''
-    printf '%s\n' 'Environment:'
-    printf '%s\n' "  OUT_DIR         Base output directory"
-    printf '%s\n' ''
-    printf '%s\n' 'Notes:'
-    printf '%s\n' '  * If BusyBox is dynamically linked, required shared libraries are copied automatically.'
-    printf '%s\n' '  * The init script drops to an interactive shell after mounting basic pseudo filesystems.'
+# Global variables for parsed arguments
+MKFS_ARCH=""
+MKFS_OUT_DIR=""
+MKFS_GUEST_DIR=""
+MKFS_ARGS=""
+
+mkfs_usage() {
+    printf 'Generate a filesystem image containing BusyBox and basic device nodes\n'
+    printf '\n'
+    printf 'Usage:\n'
+    printf '  scripts/mkfs.sh <command> [options]\n'
+    printf '\n'
+    printf '<command>:\n'
+    printf '  aarch64                       Build minimal filesystem for aarch64\n'
+    printf '  riscv64                       Build minimal filesystem for riscv64\n'
+    printf '  x86_64                        Build minimal filesystem for x86_64\n'
+    printf '  help, -h, --help              Display this help information\n'
+    printf '\n'
+    printf '[options]:\n'
+    printf '  --out_dir <dir>               Output directory (default: IMAGES/qemu/linux/<arch>)\n'
+    printf '  --guest <dir>                 Guest directory to copy into rootfs /guest\n'
+    printf '\n'
+    printf 'Environment Variables:\n'
+    printf '  BUSYBOX_REPO_URL              BusyBox repository URL\n'
+    printf '  BUSYBOX_SRC_DIR               BusyBox source directory\n'
+    printf '  BUSYBOX_PATCH_DIR             BusyBox patch directory\n'
+    printf '\n'
+    printf 'Notes:\n'
+    printf '  * If BusyBox is dynamically linked, required shared libraries are copied automatically.\n'
+    printf '  * The init script drops to an interactive shell after mounting basic pseudo filesystems.\n'
+    printf '\n'
+    printf 'Examples:\n'
+    printf '  scripts/mkfs.sh aarch64\n'
+    printf '  scripts/mkfs.sh riscv64 --out_dir /tmp/output\n'
+    printf '  scripts/mkfs.sh aarch64 --guest /path/to/guest/files\n'
 }
 
-build_busybox() {
+mkfs_parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --out_dir)
+                MKFS_OUT_DIR="$2"
+                shift 2
+                ;;
+            --guest)
+                MKFS_GUEST_DIR="$2"
+                shift 2
+                ;;
+            *)
+                MKFS_ARGS="$MKFS_ARGS $1"
+                shift
+                ;;
+        esac
+    done
+}
+
+mkfs_build_busybox() {
     local cross=""
-    if [[ "$ARCH" == "x86_64" ]]; then
+    if [[ "$MKFS_ARCH" == "x86_64" ]]; then
         cross=""
     else
-        cross="${ARCH}-linux-gnu-"
+        cross="${MKFS_ARCH}-linux-gnu-"
     fi
     pushd "$BUSYBOX_SRC_DIR" >/dev/null
     info "Cleaning: make distclean"
@@ -53,7 +90,7 @@ build_busybox() {
     popd >/dev/null
 }
 
-create_init() {
+mkfs_create_init() {
     printf '%s\n' \
         '#!/bin/sh' \
         'export PATH=/bin:/sbin:/usr/bin:/usr/sbin' \
@@ -94,10 +131,19 @@ create_init() {
     chmod +x etc/init.d/rcS
 }
 
-pack_fs() {
+mkfs_pack_fs() {
     # 0. Prepare working directory
-    OUTPUT_DIR="${OUT_DIR:-${ROOT_DIR}/IMAGES/qemu/linux/${ARCH}}"
+    OUTPUT_DIR="${MKFS_OUT_DIR:-${ROOT_DIR}/IMAGES/qemu/linux/${MKFS_ARCH}}"
     mkdir -p "$OUTPUT_DIR"
+    
+    # Convert guest directory to absolute path before changing directory
+    if [[ -n "$MKFS_GUEST_DIR" ]]; then
+        MKFS_GUEST_DIR="$(cd "$MKFS_GUEST_DIR" 2>/dev/null && pwd -P)" || {
+            warn "Guest directory $MKFS_GUEST_DIR does not exist or is not accessible"
+            MKFS_GUEST_DIR=""
+        }
+    fi
+    
     TMP_DIR=$(mktemp -d)
     cleanup() { rm -rf "$TMP_DIR"; }
     trap cleanup EXIT
@@ -106,6 +152,28 @@ pack_fs() {
 
     # 1. Create necessary directory structure
     mkdir -p bin sbin usr/bin usr/sbin dev dev/pts etc proc sys
+    # 1.5 Copy guest directory if specified
+    if [[ -n "$MKFS_GUEST_DIR" ]]; then
+        if [[ -d "$MKFS_GUEST_DIR" ]]; then
+            info "Copying guest directory: $MKFS_GUEST_DIR -> guest/"
+            # Use rsync or cp with proper flags to ensure directory is copied
+            if command -v rsync >/dev/null 2>&1; then
+                rsync -a "$MKFS_GUEST_DIR/" guest/ 2>/dev/null || true
+            else
+                # Fallback to cp with recursive and archive flags
+                cp -a "$MKFS_GUEST_DIR"/. guest/ 2>/dev/null || true
+            fi
+            # Verify guest directory was created
+            if [[ -d "guest" ]]; then
+                info "Guest directory copied successfully, contents:"
+                ls -la guest/ || true
+            else
+                warn "Failed to create guest directory"
+            fi
+        else
+            warn "Guest directory $MKFS_GUEST_DIR does not exist, skipping..."
+        fi
+    fi
     # 2. Use fakeroot to create device nodes
     fakeroot bash -c '
         mknod dev/console c 5 1 || true
@@ -130,7 +198,7 @@ pack_fs() {
     fi
     [[ -e bin/sh ]] || ln -s busybox bin/sh
     # 4. Create init script
-    create_init
+    mkfs_create_init
     [[ -e bin/init ]] || ln -s ../init bin/init
 
     # 5. Pack ramfs
@@ -167,37 +235,41 @@ pack_fs() {
     du -h "$img_out" | awk '{print "Size: "$1}'
 }
 
+mkfs() {
+    info "Cloning busybox source repository $BUSYBOX_REPO_URL -> $BUSYBOX_SRC_DIR"
+    clone_repository "$BUSYBOX_REPO_URL" "$BUSYBOX_SRC_DIR"
+
+    if [[ -d "$BUSYBOX_PATCH_DIR" ]]; then
+        info "Applying patches..."
+        apply_patches "$BUSYBOX_PATCH_DIR" "$BUSYBOX_SRC_DIR"
+    fi
+
+    info "Starting to build busybox..."
+    mkfs_build_busybox
+
+    info "Packing filesystem..."
+    mkfs_pack_fs
+}
+
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift || true
-    case "${cmd}" in
+    case "$cmd" in
         ""|-h|--help|help)
-            usage
+            mkfs_usage
             exit 0
             ;;
         aarch64|riscv64|x86_64)
-            ARCH="$cmd"
-            OUT_DIR=""
-            # Check if first arg is --dir or -d, only if at least one extra arg
-            if [[ $# -ge 2 && ( "$1" == "--dir" || "$1" == "-d" ) ]]; then
-                OUT_DIR="$2"
-                shift 2
-            fi
-            info "Cloning busybox source repository $BUSYBOX_REPO_URL -> $BUSYBOX_SRC_DIR"
-            clone_repository "$BUSYBOX_REPO_URL" "$BUSYBOX_SRC_DIR"
-
-            info "Applying patches..."
-            apply_patches "$BUSYBOX_PATCH_DIR" "$BUSYBOX_SRC_DIR"
-
-            info "Starting to build busybox..."
-            build_busybox "$@"
-
-            info "Packing filesystem..."
-            pack_fs
+            MKFS_ARCH="$cmd"
             ;;
         *)
-            echo "Unknown cmd: ${cmd}" >&2
-            exit 2
+            die "Unknown command: $cmd"
             ;;
     esac
+
+    # Parse the other arguments
+    mkfs_parse_args "$@"
+
+    # Call the main function
+    mkfs
 fi
