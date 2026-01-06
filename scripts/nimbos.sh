@@ -106,7 +106,7 @@ build_nimbos() {
         return 0
     fi
 
-    NIMBOS_IMAGES_DIR="${NIMBOS_IMAGES_DIR}/${NIMBOS_PLATFORM}"
+    NIMBOS_IMAGES_DIR="${NIMBOS_IMAGES_DIR}/${NIMBOS_PLATFORM}/nimbos"
     mkdir -p "$NIMBOS_IMAGES_DIR"
 
     # Build axvm-bios-x86 for x86_64 architecture
