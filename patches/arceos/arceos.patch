@@ -38,6 +38,19 @@ index ff1198b..15887ec 100644
      } else {
          #[cfg(target_os = "none")] // ignore in rust-analyzer & cargo test
          compile_error!("No platform crate linked!\n\nPlease add `extern crate <platform>` in your code.");
+diff --git a/modules/axhal/Cargo.toml b/modules/axhal/Cargo.toml
+index 9b2f312..e2538ea 100644
+--- a/modules/axhal/Cargo.toml
++++ b/modules/axhal/Cargo.toml
+@@ -41,7 +41,7 @@ ipi = ["irq"]
+ [dependencies]
+ axalloc = {workspace = true, optional = true}
+ axconfig = {workspace = true}
+-axcpu = "0.2"
++axcpu = { git = "https://github.com/arceos-org/axcpu.git", tag="dev-v03" }
+ axlog = {workspace = true}
+ axplat.workspace = true
+ cfg-if = "1.0"
 diff --git a/scripts/make/features.mk b/scripts/make/features.mk
 index 7a7f153..9a01ebb 100644
 --- a/scripts/make/features.mk
