@@ -78,7 +78,7 @@ usage() {
     printf '\n'
     printf 'Commands:\n'
     printf '  all                               Build all supported OS\n'
-    printf '  linux                             Build only the Linux system\n'
+    printf '  linux                             Build Linux kernel and U-Boot\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  help, -h, --help                  Display this help information\n'
     printf '  clean                             Clean build output artifacts\n'
@@ -95,6 +95,7 @@ build_linux() {
     # RDK S100P SDK is located at /share/guest-images/rdk_s100p
     REMOTE_HOST="10.3.10.194"
     REMOTE_DIR="/share/guest-images/rdk_s100p"
+    BOOTLOADER_DIR="${REMOTE_DIR}/source/bootloader"
 
     # Determine local IP addresses (IPv4) to detect if we are on REMOTE_HOST.
     # We collect all non-loopback IPv4 addresses assigned to the host.
@@ -113,42 +114,67 @@ build_linux() {
             # Apply patches before build
             apply_patches_remote "${LINUX_PATCH_DIR}" "${REMOTE_HOST}" "${REMOTE_DIR}"
             
-            info "Building remotely via SSH: ssh ${REMOTE_HOST} cd '${REMOTE_DIR}' && ./mk_kernel.sh"
+            # Build kernel
+            info "Building kernel remotely via SSH"
             ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./mk_kernel.sh"
 
+            # Build uboot
+            info "Building uboot remotely via SSH"
+            # Create img_packages directory before build (mk_hb_img.py doesn't create it)
+            ssh "${REMOTE_HOST}" "mkdir -p '${BOOTLOADER_DIR}/out/target/product/img_packages'"
+            ssh "${REMOTE_HOST}" "cd '${BOOTLOADER_DIR}/build' && ./xbuild.sh lunch 1 && ./xbuild.sh uboot && ./xbuild.sh pack"
+
+            # Copy kernel and uboot artifacts
             info "Copying build artifacts: -> $LINUX_IMAGES_DIR"
             mkdir -p "${LINUX_IMAGES_DIR}"
-            # Copy kernel image from debian package output
-            scp "${REMOTE_HOST}:${REMOTE_DIR}/out/build/kernel/debian/linux-image/boot/vmlinuz-"* "${LINUX_IMAGES_DIR}/rdk-s100p" || true
-            # Copy device tree
-            scp "${REMOTE_HOST}:${REMOTE_DIR}/out/build/kernel/arch/arm64/boot/dts/hobot/rdk-s100-v0p5.dtb" "${LINUX_IMAGES_DIR}/rdk-s100p.dtb" || true
+            # Copy kernel image
+            scp "${REMOTE_HOST}:${REMOTE_DIR}/out/build/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/rdk-s100p" || true
+            # Copy device trees from local patches directory
+            cp "${LINUX_PATCH_DIR}/rdk_s100p_host.dtb" "${LINUX_IMAGES_DIR}/" || true
+            cp "${LINUX_PATCH_DIR}/rdk_s100p_guest.dtb" "${LINUX_IMAGES_DIR}/" || true
+            # Copy uboot.img
+            scp "${REMOTE_HOST}:${BOOTLOADER_DIR}/out/target/product/img_packages/uboot.img" "${LINUX_IMAGES_DIR}/" || true
         else
             info "Detected REMOTE_HOST ($REMOTE_HOST) is the current machine; building locally in ${REMOTE_DIR}"
             if [[ -d "$REMOTE_DIR" ]]; then
                 # Apply patches before build (locally)
-                apply_patches_local "${LINUX_PATCH_DIR}" "${REMOTE_DIR}"
+                apply_patches "${LINUX_PATCH_DIR}" "${REMOTE_DIR}"
                 
+                # Build kernel
+                info "Building kernel locally"
                 (cd "$REMOTE_DIR" && ./mk_kernel.sh)
+
+                # Build uboot
+                info "Building uboot locally"
+                # Create img_packages directory before build (mk_hb_img.py doesn't create it)
+                mkdir -p "${BOOTLOADER_DIR}/out/target/product/img_packages"
+                (cd "${BOOTLOADER_DIR}/build" && ./xbuild.sh lunch 1 && ./xbuild.sh uboot && ./xbuild.sh pack)
             else
                 info "Local REMOTE_DIR ${REMOTE_DIR} not found; running ./mk_kernel.sh here as fallback"
                 ./mk_kernel.sh
             fi
 
+            # Copy kernel and uboot artifacts
             info "Copying build artifacts: -> $LINUX_IMAGES_DIR"
             mkdir -p "${LINUX_IMAGES_DIR}"
-            # Copy kernel image from debian package output
-            cp "${REMOTE_DIR}"/out/build/kernel/debian/linux-image/boot/vmlinuz-* "${LINUX_IMAGES_DIR}/rdk-s100p" 2>/dev/null || true
-            # Copy device tree
-            cp "${REMOTE_DIR}/out/build/kernel/arch/arm64/boot/dts/hobot/rdk-s100-v0p5.dtb" "${LINUX_IMAGES_DIR}/rdk-s100p.dtb" 2>/dev/null || true
+            # Copy kernel image
+            cp "${REMOTE_DIR}/out/build/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/rdk-s100p" 2>/dev/null || true
+            # Copy device trees from local patches directory
+            cp "${LINUX_PATCH_DIR}/rdk_s100p_host.dtb" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
+            cp "${LINUX_PATCH_DIR}/rdk_s100p_guest.dtb" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
+            # Copy uboot.img
+            cp "${BOOTLOADER_DIR}/out/target/product/img_packages/uboot.img" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
         fi
     else
         if $is_remote; then
-            info "Cleaning remotely via SSH: ssh ${REMOTE_HOST} cd '${REMOTE_DIR}' && ./mk_kernel.sh clean"
+            info "Cleaning kernel and uboot remotely via SSH"
             ssh "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && ./mk_kernel.sh clean"
+            ssh "${REMOTE_HOST}" "cd '${BOOTLOADER_DIR}/build' && ./xbuild.sh uboot clean"
         else
             info "Detected REMOTE_HOST ($REMOTE_HOST) is the current machine; cleaning locally in ${REMOTE_DIR}"
             if [[ -d "$REMOTE_DIR" ]]; then
                 (cd "$REMOTE_DIR" && ./mk_kernel.sh clean)
+                (cd "${BOOTLOADER_DIR}/build" && ./xbuild.sh uboot clean)
             else
                 info "Local REMOTE_DIR ${REMOTE_DIR} not found; running ./mk_kernel.sh clean here as fallback"
                 ./mk_kernel.sh clean || true
@@ -195,12 +221,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         all)
             linux "$@"
-
             arceos "$@"
             ;;
         clean)
             linux "clean"
-
             arceos "clean"
             ;;
         *)
