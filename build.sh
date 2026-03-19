@@ -15,6 +15,7 @@ usage() {
     printf '%s\n' "    evm3588              -> scripts/evm3588.sh"
     printf '%s\n' "    tac-e400-plc         -> scripts/tac-e400-plc.sh"
     printf '%s\n' "    orangepi-5-plus      -> scripts/orangepi-5-plus.sh"
+    printf '%s\n' "    rdk-s100p            -> scripts/rdk-s100p.sh"
     printf '%s\n' "    bst-a1000            -> scripts/bst-a1000.sh"
     printf '%s\n' "    qemu-aarch64         -> scripts/qemu.sh aarch64"
     printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh x86_64"
@@ -50,7 +51,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             usage
             exit 0
             ;;
-        phytiumpi|roc-rk3568-pc|evm3588|tac-e400-plc|orangepi-5-plus)
+        phytiumpi|roc-rk3568-pc|evm3588|tac-e400-plc|orangepi-5-plus|rdk-s100p)
             script_path="${SCRIPTS_DIR}/${cmd}.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
             chmod +x "$script_path" 2>/dev/null || true
@@ -76,7 +77,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             fi
             ;;
         all|clean)
-            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc orangepi-5-plus qemu-aarch64 qemu-x86_64 qemu-riscv64)
+            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc orangepi-5-plus rdk-s100p qemu-aarch64 qemu-x86_64 qemu-riscv64)
             for p in "${platforms[@]}"; do
                 if [[ "$cmd" == "all" ]]; then
                     echo "Building: $p $*"
