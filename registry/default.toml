@@ -3,3 +3,6 @@ url = "https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/he
 
 [[includes]]
 url = "https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/heads/main/registry/v0.0.22.toml"
+
+[[includes]]
+url = "https://raw.githubusercontent.com/arceos-hypervisor/axvisor-guest/refs/heads/main/registry/v0.0.23.toml"
