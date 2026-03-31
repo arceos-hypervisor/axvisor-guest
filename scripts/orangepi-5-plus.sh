@@ -14,6 +14,8 @@ LINUX_SRC_DIR="${BUILD_DIR}/orangepi"
 LINUX_PATCH_DIR="${ROOT_DIR}/patches/orangepi"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/arceos"
+UBOOT_SCRIPT="${SCRIPT_DIR}/build-u-boot-orangepi5.sh.sh"
+UBOOT_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/u-boot"
 
 # Output help information
 usage() {
@@ -24,7 +26,8 @@ usage() {
     printf '\n'
     printf 'Commands:\n'
     printf '  all                               Build all supported OS\n'
-    printf '  linux                             Build only the Linux system\n'
+    printf '  linux                             Build Linux system (includes U-Boot)\n'
+    printf '  uboot                             Build only U-Boot\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  help, -h, --help                  Display this help information\n'
     printf '  clean                             Clean build output artifacts\n'
@@ -34,13 +37,33 @@ usage() {
     printf '\n'
     printf 'Examples:\n'
     printf '  scripts/orangepi.sh all           # Build everything\n'
-    printf '  scripts/orangepi.sh linux         # Build only Linux\n'
+    printf '  scripts/orangepi.sh linux         # Build Linux with U-Boot\n'
+}
+
+build_uboot() {
+    info "Building U-Boot for Orange Pi 5..."
+    chmod +x "${UBOOT_SCRIPT}"
+    bash "${UBOOT_SCRIPT}"
+
+    mkdir -p "${UBOOT_IMAGES_DIR}"
+    cp -v "${PWD}/build/orangepi/u-boot-work/out/u-boot-orangepi5-spi.bin" "${UBOOT_IMAGES_DIR}/"
+    success "U-Boot built successfully. Output: ${UBOOT_IMAGES_DIR}/u-boot-orangepi5-spi.bin"
 }
 
 build_linux() {
     if [[ -d "$LINUX_SRC_DIR" ]]; then
         pushd "$LINUX_SRC_DIR" >/dev/null
         if [[ "$@" != *"clean"* ]]; then
+            # Configure GPT partition layout: EFI (FAT32) + FAT32 boot + ext4 rootfs
+            local userpatches_lib_config="userpatches/lib.config"
+            info "Configuring GPT partition layout (EFI + FAT32 boot + ext4 rootfs)"
+            mkdir -p userpatches
+            cat > "$userpatches_lib_config" <<'EOF'
+IMAGE_PARTITION_TABLE=gpt
+BOOTFS_TYPE=fat
+BOOTSIZE=1024
+EOF
+
             info "Starting compilation: ./build.sh BOARD=orangepi5plus BRANCH=current BUILD_OPT=image RELEASE=jammy BUILD_MINIMAL=no BUILD_DESKTOP=no KERNEL_CONFIGURE=no"
             ./build.sh BOARD=orangepi5plus BRANCH=current BUILD_OPT=image RELEASE=jammy BUILD_MINIMAL=no BUILD_DESKTOP=no KERNEL_CONFIGURE=no
             
@@ -51,11 +74,30 @@ build_linux() {
             "$LINUX_IMAGES_DIR/"
             mv "$LINUX_IMAGES_DIR/Image" "$LINUX_IMAGES_DIR/orangepi-5-plus"
             mv "$LINUX_IMAGES_DIR/rk3588-orangepi-5-plus.dtb" "$LINUX_IMAGES_DIR/orangepi-5-plus.dtb"
+
+            # Apply chosen node overlay to the DTB
+            local chosen_overlay_dts="${LINUX_PATCH_DIR}/orangepi-5-plus-chosen-overlay.dts"
+            local chosen_overlay_dtbo="${LINUX_IMAGES_DIR}/orangepi-5-plus-chosen.dtbo"
+            if [[ -f "$chosen_overlay_dts" ]]; then
+                info "Applying chosen node overlay to device tree"
+                dtc -@ -I dts -O dtb -o "$chosen_overlay_dtbo" "$chosen_overlay_dts"
+                fdtoverlay -i "$LINUX_IMAGES_DIR/orangepi-5-plus.dtb" \
+                           -o "$LINUX_IMAGES_DIR/orangepi-5-plus.dtb" \
+                           "$chosen_overlay_dtbo"
+                rm -f "$chosen_overlay_dtbo"
+                success "Chosen node overlay applied to orangepi-5-plus.dtb"
+            fi
+
+            popd >/dev/null
+
+            # Build U-Boot after Linux
+            build_uboot
         else
             info "Cleaning: nothing to do for Orange Pi Linux, just removing ${LINUX_IMAGES_DIR}/*"
             rm ${LINUX_IMAGES_DIR}/* || true
+            rm ${UBOOT_IMAGES_DIR}/* 2>/dev/null || true
+            popd >/dev/null
         fi
-        popd >/dev/null
     fi
 }
 
@@ -85,6 +127,17 @@ arceos() {
     bash "${SCRIPT_DIR}/arceos.sh" aarch64-dyn --bin-dir "$ARCEOS_IMAGES_DIR" --bin-name orangepi-5-plus $@
 }
 
+uboot() {
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building U-Boot..."
+    else
+        info "Cleaning U-Boot build artifacts..."
+        rm -rf "${PWD}/build/orangepi/u-boot-work" "${UBOOT_IMAGES_DIR}"
+        return
+    fi
+    build_uboot
+}
+
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift || true
@@ -95,6 +148,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             ;;
         linux)
             linux "$@"
+            ;;
+        uboot)
+            uboot "$@"
             ;;
         arceos)
             arceos "$@"
