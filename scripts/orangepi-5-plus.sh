@@ -54,6 +54,19 @@ build_linux() {
     if [[ -d "$LINUX_SRC_DIR" ]]; then
         pushd "$LINUX_SRC_DIR" >/dev/null
         if [[ "$@" != *"clean"* ]]; then
+            # Configure two-partition layout: FAT boot + ext4 rootfs
+            # Without BOOTFS_TYPE set, orangepi-build creates a single ext4 root partition.
+            # Setting BOOTFS_TYPE=fat causes it to create a separate boot partition.
+            local userpatches_lib_config="userpatches/lib.config"
+            if ! grep -q "^BOOTFS_TYPE=" "$userpatches_lib_config" 2>/dev/null; then
+                info "Configuring two-partition image layout (FAT boot + ext4 rootfs)"
+                mkdir -p userpatches
+                cat >> "$userpatches_lib_config" <<'EOF'
+BOOTFS_TYPE=fat
+BOOTSIZE=256
+EOF
+            fi
+
             info "Starting compilation: ./build.sh BOARD=orangepi5plus BRANCH=current BUILD_OPT=image RELEASE=jammy BUILD_MINIMAL=no BUILD_DESKTOP=no KERNEL_CONFIGURE=no"
             ./build.sh BOARD=orangepi5plus BRANCH=current BUILD_OPT=image RELEASE=jammy BUILD_MINIMAL=no BUILD_DESKTOP=no KERNEL_CONFIGURE=no
             
@@ -64,6 +77,19 @@ build_linux() {
             "$LINUX_IMAGES_DIR/"
             mv "$LINUX_IMAGES_DIR/Image" "$LINUX_IMAGES_DIR/orangepi-5-plus"
             mv "$LINUX_IMAGES_DIR/rk3588-orangepi-5-plus.dtb" "$LINUX_IMAGES_DIR/orangepi-5-plus.dtb"
+
+            # Apply chosen node overlay to the DTB
+            local chosen_overlay_dts="${LINUX_PATCH_DIR}/orangepi-5-plus-chosen-overlay.dts"
+            local chosen_overlay_dtbo="${LINUX_IMAGES_DIR}/orangepi-5-plus-chosen.dtbo"
+            if [[ -f "$chosen_overlay_dts" ]]; then
+                info "Applying chosen node overlay to device tree"
+                dtc -@ -I dts -O dtb -o "$chosen_overlay_dtbo" "$chosen_overlay_dts"
+                fdtoverlay -i "$LINUX_IMAGES_DIR/orangepi-5-plus.dtb" \
+                           -o "$LINUX_IMAGES_DIR/orangepi-5-plus.dtb" \
+                           "$chosen_overlay_dtbo"
+                rm -f "$chosen_overlay_dtbo"
+                success "Chosen node overlay applied to orangepi-5-plus.dtb"
+            fi
 
             popd >/dev/null
 
