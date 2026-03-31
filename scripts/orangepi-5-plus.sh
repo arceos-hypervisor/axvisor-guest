@@ -54,18 +54,15 @@ build_linux() {
     if [[ -d "$LINUX_SRC_DIR" ]]; then
         pushd "$LINUX_SRC_DIR" >/dev/null
         if [[ "$@" != *"clean"* ]]; then
-            # Configure two-partition layout: FAT boot + ext4 rootfs
-            # Without BOOTFS_TYPE set, orangepi-build creates a single ext4 root partition.
-            # Setting BOOTFS_TYPE=fat causes it to create a separate boot partition.
+            # Configure GPT partition layout: EFI (FAT32) + FAT32 boot + ext4 rootfs
             local userpatches_lib_config="userpatches/lib.config"
-            if ! grep -q "^BOOTFS_TYPE=" "$userpatches_lib_config" 2>/dev/null; then
-                info "Configuring two-partition image layout (FAT boot + ext4 rootfs)"
-                mkdir -p userpatches
-                cat >> "$userpatches_lib_config" <<'EOF'
+            info "Configuring GPT partition layout (EFI + FAT32 boot + ext4 rootfs)"
+            mkdir -p userpatches
+            cat > "$userpatches_lib_config" <<'EOF'
+IMAGE_PARTITION_TABLE=gpt
 BOOTFS_TYPE=fat
-BOOTSIZE=256
+BOOTSIZE=1024
 EOF
-            fi
 
             info "Starting compilation: ./build.sh BOARD=orangepi5plus BRANCH=current BUILD_OPT=image RELEASE=jammy BUILD_MINIMAL=no BUILD_DESKTOP=no KERNEL_CONFIGURE=no"
             ./build.sh BOARD=orangepi5plus BRANCH=current BUILD_OPT=image RELEASE=jammy BUILD_MINIMAL=no BUILD_DESKTOP=no KERNEL_CONFIGURE=no
