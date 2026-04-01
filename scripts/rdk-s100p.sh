@@ -132,9 +132,6 @@ build_linux() {
             scp "${REMOTE_HOST}:${REMOTE_DIR}/out/build/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/rdk-s100p" || true
             # Copy built kernel dtb needed for release
             scp "${REMOTE_HOST}:${REMOTE_DIR}/${KERNEL_DTB_REL}" "${LINUX_IMAGES_DIR}/" || true
-            # Copy device trees from local patches directory
-            cp "${LINUX_PATCH_DIR}/rdk_s100p_host.dtb" "${LINUX_IMAGES_DIR}/" || true
-            cp "${LINUX_PATCH_DIR}/rdk_s100p_guest.dtb" "${LINUX_IMAGES_DIR}/" || true
             # Copy uboot.img
             scp "${REMOTE_HOST}:${BOOTLOADER_DIR}/out/target/product/img_packages/uboot.img" "${LINUX_IMAGES_DIR}/" || true
         else
@@ -164,9 +161,6 @@ build_linux() {
             cp "${REMOTE_DIR}/out/build/kernel/arch/arm64/boot/Image" "${LINUX_IMAGES_DIR}/rdk-s100p" 2>/dev/null || true
             # Copy built kernel dtb needed for release
             cp "${REMOTE_DIR}/${KERNEL_DTB_REL}" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
-            # Copy device trees from local patches directory
-            cp "${LINUX_PATCH_DIR}/rdk_s100p_host.dtb" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
-            cp "${LINUX_PATCH_DIR}/rdk_s100p_guest.dtb" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
             # Copy uboot.img
             cp "${BOOTLOADER_DIR}/out/target/product/img_packages/uboot.img" "${LINUX_IMAGES_DIR}/" 2>/dev/null || true
         fi
