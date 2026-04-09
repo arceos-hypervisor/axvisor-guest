@@ -35,6 +35,7 @@ usage() {
     printf '  linux                             Build the Linux system\n'
     printf '  arceos                            Build the ArceOS system\n'
     printf '  nimbos                            Build the NimbOS system\n'
+    printf '  zephyr                            Build the Zephyr guest image (aarch64 only)\n'
     printf '  all|""                            Build all systems (default)\n'
     printf '  clean                             Clean build output artifacts\n'
     printf '\n'
@@ -165,6 +166,14 @@ nimbos() {
     bash "${SCRIPT_DIR}/nimbos.sh" "$ARCH" "--images-dir" "$IMAGES_BASE_DIR" "$@"
 }
 
+zephyr() {
+    if [[ "${ARCH}" != "aarch64" ]]; then
+        die "Zephyr guest build is currently only supported for qemu aarch64"
+    fi
+
+    bash "${SCRIPT_DIR}/zephyr.sh" qemu-aarch64 --images-dir "${IMAGES_BASE_DIR}/${ARCH}/zephyr" "$@"
+}
+
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift 1 || true
@@ -187,18 +196,27 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 nimbos)
                     nimbos "$@"
                     ;;
+                zephyr)
+                    zephyr "$@"
+                    ;;
                 all)
                     linux "$@"
                     arceos "$@"
                     nimbos "$@"
+                    if [[ "${ARCH}" == "aarch64" ]]; then
+                        zephyr "$@"
+                    fi
                     ;;
                 clean)
                     linux "clean"
                     arceos "clean"
                     nimbos "clean"
+                    if [[ "${ARCH}" == "aarch64" ]]; then
+                        zephyr "clean"
+                    fi
                     ;;
                 *)
-                    die "Unknown system: ${SYSTEM} (supported: linux, arceos, nimbos, all)"
+                    die "Unknown system: ${SYSTEM} (supported: linux, arceos, nimbos, zephyr, all)"
                     ;;
             esac
             ;;
