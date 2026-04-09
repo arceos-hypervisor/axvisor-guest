@@ -15,6 +15,7 @@ LINUX_PATCH_DIR="${ROOT_DIR}/patches/orangepi"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/arceos"
 ZEPHYR_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/zephyr"
+FREERTOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/freertos"
 UBOOT_SCRIPT="${SCRIPT_DIR}/build-u-boot-orangepi5.sh.sh"
 UBOOT_IMAGES_DIR="${ROOT_DIR}/IMAGES/orangepi/u-boot"
 
@@ -31,6 +32,7 @@ usage() {
     printf '  uboot                             Build only U-Boot\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  zephyr                            Build only the Zephyr guest image\n'
+    printf '  freertos                          Build only the FreeRTOS guest image\n'
     printf '  help, -h, --help                  Display this help information\n'
     printf '  clean                             Clean build output artifacts\n'
     printf '\n'
@@ -139,6 +141,16 @@ zephyr() {
     fi
 }
 
+freertos() {
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building FreeRTOS using common freertos.sh script"
+        bash "${SCRIPT_DIR}/freertos.sh" orangepi-5-plus
+    else
+        info "Cleaning FreeRTOS using common freertos.sh script"
+        bash "${SCRIPT_DIR}/freertos.sh" orangepi-5-plus clean
+    fi
+}
+
 uboot() {
     if [[ "$@" != *"clean"* ]]; then
         info "Building U-Boot..."
@@ -170,12 +182,17 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         zephyr)
             zephyr "$@"
             ;;
+        freertos)
+            freertos "$@"
+            ;;
         all)
             linux "$@"
 
             arceos "$@"
 
             zephyr "$@"
+
+            freertos "$@"
             ;;
         clean)
             linux "clean"
@@ -183,6 +200,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             arceos "clean"
 
             zephyr "clean"
+
+            freertos "clean"
             ;;
         *)
             die "Unknown command: $cmd" >&2

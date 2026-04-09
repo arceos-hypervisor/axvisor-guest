@@ -29,6 +29,7 @@ usage() {
     printf '%s\n' "    linux                build linux kernel"
     printf '%s\n' "    arceos               build ArceOS"
     printf '%s\n' "    zephyr               build Zephyr guest image"
+    printf '%s\n' "    freertos             build FreeRTOS guest image"
     printf '%s\n' "    all|''               build all supported OSes, if not specified"
     printf '%s\n' "    clean                Clean build output artifacts"
     printf '%s\n' ""
