@@ -14,8 +14,10 @@ ZEPHYR_SRC_DIR="${ZEPHYR_SRC_DIR:-${BUILD_DIR}/zephyr}"
 ZEPHYR_PATCH_DIR="${ZEPHYR_PATCH_DIR:-${ROOT_DIR}/patches/zephyr}"
 ZEPHYR_PYENV="${ZEPHYR_PYENV:-/tmp/zephyr-pyenv}"
 ZEPHYR_PYTHON="${ZEPHYR_PYTHON:-${ZEPHYR_PYENV}/bin/python}"
+ZEPHYR_SDK_URL="${ZEPHYR_SDK_URL:-https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v1.0.1/toolchain_gnu_linux-x86_64_aarch64-zephyr-elf.tar.xz}"
+ZEPHYR_SDK_DIR="${ZEPHYR_SDK_DIR:-${BUILD_DIR}/zephyr-sdk}"
 ZEPHYR_TOOLCHAIN_VARIANT="${ZEPHYR_TOOLCHAIN_VARIANT:-cross-compile}"
-ZEPHYR_CROSS_COMPILE="${ZEPHYR_CROSS_COMPILE:-/code/rtos/zephyr-sdk-0.16.5-1/aarch64-zephyr-elf/bin/aarch64-zephyr-elf-}"
+ZEPHYR_CROSS_COMPILE="${ZEPHYR_CROSS_COMPILE:-${ZEPHYR_SDK_DIR}/bin/aarch64-zephyr-elf-}"
 
 ZEPHYR_PLATFORM=""
 ZEPHYR_APP=""
@@ -107,6 +109,31 @@ ensure_zephyr_python() {
     fi
 }
 
+ensure_zephyr_sdk() {
+    if [[ -x "${ZEPHYR_CROSS_COMPILE}gcc" ]]; then
+        info "Zephyr SDK toolchain found at ${ZEPHYR_SDK_DIR}"
+        return 0
+    fi
+
+    info "Downloading Zephyr SDK from ${ZEPHYR_SDK_URL}"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    local archive="${tmpdir}/zephyr-sdk.tar.xz"
+
+    curl -fSL -o "${archive}" "${ZEPHYR_SDK_URL}"
+
+    info "Extracting Zephyr SDK to ${ZEPHYR_SDK_DIR}"
+    mkdir -p "${ZEPHYR_SDK_DIR}"
+    tar xf "${archive}" -C "${ZEPHYR_SDK_DIR}" --strip-components=1
+
+    rm -rf "${tmpdir}"
+
+    if [[ ! -x "${ZEPHYR_CROSS_COMPILE}gcc" ]]; then
+        die "Zephyr SDK toolchain not found after extraction: ${ZEPHYR_CROSS_COMPILE}gcc"
+    fi
+    info "Zephyr SDK installed at ${ZEPHYR_SDK_DIR}"
+}
+
 prepare_zephyr_source() {
     if [[ ! -d "${ZEPHYR_SRC_DIR}/.git" ]]; then
         info "Cloning Zephyr source repository ${ZEPHYR_REPO_URL} -> ${ZEPHYR_SRC_DIR}"
@@ -117,17 +144,16 @@ prepare_zephyr_source() {
 
     if [[ -d "${ZEPHYR_SRC_DIR}/.patch_stamps" ]] && find "${ZEPHYR_SRC_DIR}/.patch_stamps" -type f | read -r; then
         info "Detected previously applied Zephyr patches, reusing current source state"
-        return 0
-    fi
+    else
+        if [[ -n "${ZEPHYR_REF}" ]]; then
+            info "Checking out Zephyr ref ${ZEPHYR_REF}"
+            checkout_ref "${ZEPHYR_SRC_DIR}" "${ZEPHYR_REF}"
+        fi
 
-    if [[ -n "${ZEPHYR_REF}" ]]; then
-        info "Checking out Zephyr ref ${ZEPHYR_REF}"
-        checkout_ref "${ZEPHYR_SRC_DIR}" "${ZEPHYR_REF}"
-    fi
-
-    if [[ -n "${ZEPHYR_PATCH_DIR}" && -d "${ZEPHYR_PATCH_DIR}" ]]; then
-        info "Applying Zephyr patches from ${ZEPHYR_PATCH_DIR}"
-        apply_patches "${ZEPHYR_PATCH_DIR}" "${ZEPHYR_SRC_DIR}"
+        if [[ -n "${ZEPHYR_PATCH_DIR}" && -d "${ZEPHYR_PATCH_DIR}" ]]; then
+            info "Applying Zephyr patches from ${ZEPHYR_PATCH_DIR}"
+            apply_patches "${ZEPHYR_PATCH_DIR}" "${ZEPHYR_SRC_DIR}"
+        fi
     fi
 }
 
@@ -163,7 +189,13 @@ zephyr_build() {
     fi
 
     prepare_zephyr_source
+    ensure_zephyr_sdk
     ensure_zephyr_python
+
+    if [[ ! -d "${ZEPHYR_SRC_DIR}/.west" ]]; then
+        info "Initializing west workspace in ${ZEPHYR_SRC_DIR}"
+        "${ZEPHYR_PYENV}/bin/west" init -l "${ZEPHYR_SRC_DIR}" --mf west.yml
+    fi
 
     if [[ -f "${build_dir}/CMakeCache.txt" ]]; then
         local cached_home
