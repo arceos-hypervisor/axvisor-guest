@@ -15,6 +15,8 @@ LINUX_PATCH_DIR="${ROOT_DIR}/patches/phytiumpi"
 LINUX_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/linux"
 ARCEOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/arceos"
 RTTHREAD_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/rtthread"
+ZEPHYR_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/zephyr"
+FREERTOS_IMAGES_DIR="${ROOT_DIR}/IMAGES/phytiumpi/freertos"
 
 # Output help information
 usage() {
@@ -28,6 +30,8 @@ usage() {
     printf '  linux                             Build only the Linux system\n'
     printf '  arceos                            Build only the ArceOS system\n'
     printf '  rtthread                          Build only the RT-Thread system\n'
+    printf '  zephyr                            Build only the Zephyr guest image\n'
+    printf '  freertos                          Build only the FreeRTOS guest image\n'
     printf '  help, -h, --help                  Display this help information\n'
     printf '  clean                             Clean build output artifacts\n'
     printf '\n'
@@ -105,6 +109,26 @@ rtthread() {
     fi
 }
 
+zephyr() {
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building Zephyr using common zephyr.sh script"
+        bash "${SCRIPT_DIR}/zephyr.sh" phytiumpi --images-dir "${ZEPHYR_IMAGES_DIR}" "$@"
+    else
+        info "Cleaning Zephyr using common zephyr.sh script"
+        bash "${SCRIPT_DIR}/zephyr.sh" phytiumpi clean --images-dir "${ZEPHYR_IMAGES_DIR}"
+    fi
+}
+
+freertos() {
+    if [[ "$@" != *"clean"* ]]; then
+        info "Building FreeRTOS using common freertos.sh script"
+        bash "${SCRIPT_DIR}/freertos.sh" phytiumpi
+    else
+        info "Cleaning FreeRTOS using common freertos.sh script"
+        bash "${SCRIPT_DIR}/freertos.sh" phytiumpi clean
+    fi
+}
+
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cmd="${1:-}"
     shift || true
@@ -122,12 +146,22 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         rtthread)
             rtthread "$@"
             ;;
+        zephyr)
+            zephyr "$@"
+            ;;
+        freertos)
+            freertos "$@"
+            ;;
         all)
             linux "$@"
 
             arceos "$@"
 
             rtthread "$@"
+
+            zephyr "$@"
+
+            freertos "$@"
             ;;
         clean)
             linux "clean"
@@ -135,6 +169,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             arceos "clean"
 
             rtthread "clean"
+
+            zephyr "clean"
+
+            freertos "clean"
             ;;
         *)
             die "Unknown command: $cmd" >&2
