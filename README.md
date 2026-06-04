@@ -21,7 +21,7 @@ The table below lists the hardware boards and QEMU virtual machines currently ma
 | ROC-RK3588-PC development board | aarch64 | Build from the SDK source code in the specific directory of the intranet server `10.3.10.194` | Same as above | `IMAGES/roc-rk3588-pc/linux`, `IMAGES/roc-rk3588-pc/arceos` |
 | EVM3588 development board | aarch64 | Build from the SDK source code in the specific directory of the intranet server `10.3.10.194` | Same as above | `IMAGES/evm3588/linux`, `IMAGES/evm3588/arceos` |
 | TAC-E400-PLC industrial controller | aarch64 | Pull the `tac-e400-plc` private repository and build | Same as above | `IMAGES/tac-e400-plc/linux`, `IMAGES/tac-e400-plc/arceos` |
-| QEMU virtual machine | aarch64 / riscv64 / x86_64 | Clone mainline Linux and cross-compile, use `scripts/mkfs.sh` to generate the root file system | Same as above | `IMAGES/qemu/linux/<arch>`, `IMAGES/qemu/arceos/<arch>` |
+| QEMU virtual machine | aarch64 / riscv64 / x86_64 / loongarch64 | Clone mainline Linux and cross-compile, use `scripts/mkfs.sh` to generate the root file system | Same as above | `IMAGES/qemu/<arch>/linux`, `IMAGES/qemu/<arch>/arceos` |
 | Orange Pi 5 Plus | aarch64 | Clone the [orangepi-build](https://github.com/orangepi-xunlong/orangepi-build) repository to build | Same as above | `IMAGES/orangepi/linux`, `IMAGES/orangepi/arceos` |
 | Black Sesame A1000 domain controller | aarch64 | Pull the `bst-a1000` private repository and build | Same as above | `IMAGES/orangepi/linux`, `IMAGES/orangepi/arceos` |
 
@@ -43,10 +43,11 @@ sudo apt install \
   flex bison libelf-dev libssl-dev \
   gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
   gcc-riscv64-linux-gnu g++-riscv64-linux-gnu \
+  gcc-14-loongarch64-linux-gnu g++-14-loongarch64-linux-gnu \
   bc fakeroot coreutils cpio gzip rsync file \
   debootstrap binfmt-support debian-archive-keyring eatmydata \
   python3 python3-venv curl git openssh-client libmpc-dev libgmp-dev \
-  lz4 chrpath gawk texinfo chrpath diffstat expect cmake
+  device-tree-compiler lz4 chrpath gawk texinfo chrpath diffstat expect cmake
 ```
 
 When running scripts in containers or CI, prepare proxies, APT caches, and SSH credentials in advance; otherwise, cloning and remote build steps will fail. For convenience, grant execute permissions to the scripts:
@@ -81,6 +82,7 @@ scripts/phytiumpi.sh clean            # Clean artifacts
 
 scripts/qemu.sh aarch64 linux         # QEMU aarch64 Linux
 scripts/qemu.sh riscv64 all           # riscv64 Linux + ArceOS + root file system
+scripts/qemu.sh loongarch64 linux     # QEMU LoongArch64 Linux + root file system
 scripts/qemu.sh x86_64 clean          # Clean QEMU x86_64 artifacts
 
 scripts/tac-e400-plc.sh all           # TAC-E400-PLC full build
@@ -92,7 +94,7 @@ For `evm3588.sh` and `roc-rk3568-pc.sh`, the scripts log in to `10.3.10.194` via
 If you only need to generate a minimal root file system, execute `scripts/mkfs.sh` to produce `initramfs.cpio.gz` and `rootfs.img` (the QEMU flow automatically calls this script). The script supports parameters such as `--out_dir` and `--guest`, allowing you to customize the output directory and include additional guest files:
 
 ```bash
-scripts/mkfs.sh aarch64 --out_dir IMAGES/qemu/linux/aarch64
+scripts/mkfs.sh aarch64 --out_dir IMAGES/qemu/aarch64/linux
 scripts/mkfs.sh aarch64 --guest /path/to/guest/files
 ```
 
@@ -110,12 +112,13 @@ All build artifacts are placed in the `IMAGES/<platform>/<os>` directory, where 
 | `evm3588/arceos` | Matching ArceOS firmware | `arceos-aarch64-dyn-smp1.bin` |
 | `tac-e400-plc/linux` | PLC Linux kernel and device tree | `Image`, `e2000q-hanwei-board.dtb` |
 | `tac-e400-plc/arceos` | Matching ArceOS firmware | `arceos-aarch64-dyn-smp1.bin` |
-| `qemu/linux/aarch64` | QEMU aarch64 kernel and rootfs | `Image`, `initramfs.cpio.gz`, `rootfs.img` |
-| `qemu/linux/riscv64` | QEMU riscv64 kernel and rootfs | `Image`, `initramfs.cpio.gz`, `rootfs.img` |
-| `qemu/linux/x86_64` | QEMU x86_64 kernel and rootfs | `bzImage`, `initramfs.cpio.gz`, `rootfs.img` |
-| `qemu/arceos/aarch64` | QEMU aarch64 ArceOS firmware | `arceos-aarch64-dyn-smp1.bin` |
-| `qemu/arceos/riscv64` | QEMU riscv64 ArceOS firmware | `arceos-riscv64-dyn-smp1.bin` |
-| `qemu/arceos/x86_64` | QEMU x86_64 ArceOS firmware | `arceos-x86_64-dyn-smp1.bin` |
+| `qemu/aarch64/linux` | QEMU aarch64 kernel and rootfs | `qemu-aarch64`, `initramfs.cpio.gz`, `rootfs.img` |
+| `qemu/riscv64/linux` | QEMU riscv64 kernel and rootfs | `qemu-riscv64`, `initramfs.cpio.gz`, `rootfs.img` |
+| `qemu/x86_64/linux` | QEMU x86_64 kernel and rootfs | `qemu-x86_64`, `initramfs.cpio.gz`, `rootfs.img` |
+| `qemu/loongarch64/linux` | QEMU LoongArch64 kernel and rootfs | `qemu-loongarch64`, `initramfs.cpio.gz`, `rootfs.img` |
+| `qemu/aarch64/arceos` | QEMU aarch64 ArceOS firmware | `arceos-aarch64-dyn-smp1.bin` |
+| `qemu/riscv64/arceos` | QEMU riscv64 ArceOS firmware | `arceos-riscv64-dyn-smp1.bin` |
+| `qemu/x86_64/arceos` | QEMU x86_64 ArceOS firmware | `arceos-x86_64-dyn-smp1.bin` |
 | `orangepi/linux` | Orange Pi 5 Plus vendor SDK or local builds | `boot.img`, `parameter.txt`, `u-boot.img`, `orangepi5-plus.dtb`, `Image` |
 | `orangepi/arceos` | Matching ArceOS firmware | `arceos-aarch64-dyn-smp1.bin` |
 | `bst-a1000/linux` | Black Sesame A1000 domain controller Linux kernel and device trees | `Image`, `bsta1000b-fada.dtb`, `bsta1000b-fadb.dtb` |
@@ -190,7 +193,7 @@ Once the server is up, directory indexing remains enabled, allowing you to brows
 
 ```bash
 # Download the QEMU aarch64 kernel image
-wget http://127.0.0.1:9000/qemu/linux/aarch64/Image
+wget http://127.0.0.1:9000/qemu/aarch64/linux/qemu-aarch64
 
 # Download the Phytium ArceOS firmware
 curl -O http://127.0.0.1:9000/phytiumpi/arceos/arceos-aarch64-dyn-smp1.bin

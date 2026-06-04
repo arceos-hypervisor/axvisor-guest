@@ -20,6 +20,7 @@ usage() {
     printf '%s\n' "    qemu-aarch64         -> scripts/qemu.sh aarch64"
     printf '%s\n' "    qemu-x86_64          -> scripts/qemu.sh x86_64"
     printf '%s\n' "    qemu-riscv64         -> scripts/qemu.sh riscv64"
+    printf '%s\n' "    qemu-loongarch64     -> scripts/qemu.sh loongarch64"
     printf '%s\n' "    release              -> scripts/release.sh"
     printf '%s\n' "    all                  -> build all platforms sequentially"
     printf '%s\n' "    clean                Clean build output artifacts"
@@ -65,7 +66,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
                 exec "$script_path" "$@"
             fi
             ;;
-        qemu-aarch64|qemu-x86_64|qemu-riscv64)
+        qemu-aarch64|qemu-x86_64|qemu-riscv64|qemu-loongarch64)
             str="${cmd}" && prefix="${str%-*}" && arch="${str#*-}"
             script_path="${SCRIPTS_DIR}/${prefix}.sh"
             [[ -f "$script_path" ]] || { echo "[ERROR] Script not found: $script_path" >&2; exit 1; }
@@ -79,7 +80,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             fi
             ;;
         all|clean)
-            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc orangepi-5-plus rdk-s100p qemu-aarch64 qemu-x86_64 qemu-riscv64)
+            platforms=(phytiumpi roc-rk3568-pc evm3588 tac-e400-plc orangepi-5-plus rdk-s100p qemu-aarch64 qemu-x86_64 qemu-riscv64 qemu-loongarch64)
             for p in "${platforms[@]}"; do
                 if [[ "$cmd" == "all" ]]; then
                     echo "Building: $p $*"

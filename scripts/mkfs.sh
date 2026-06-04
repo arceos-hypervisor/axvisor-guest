@@ -29,10 +29,11 @@ mkfs_usage() {
     printf '  aarch64                       Build minimal filesystem for aarch64\n'
     printf '  riscv64                       Build minimal filesystem for riscv64\n'
     printf '  x86_64                        Build minimal filesystem for x86_64\n'
+    printf '  loongarch64                   Build minimal filesystem for loongarch64\n'
     printf '  help, -h, --help              Display this help information\n'
     printf '\n'
     printf '[options]:\n'
-    printf '  --out_dir <dir>               Output directory (default: IMAGES/qemu/linux/<arch>)\n'
+    printf '  --out_dir <dir>               Output directory (default: IMAGES/qemu/<arch>/linux)\n'
     printf '  --guest <dir>                 Guest directory to copy into rootfs /guest\n'
     printf '\n'
     printf 'Environment Variables:\n'
@@ -70,12 +71,7 @@ mkfs_parse_args() {
 }
 
 mkfs_build_busybox() {
-    local cross=""
-    if [[ "$MKFS_ARCH" == "x86_64" ]]; then
-        cross=""
-    else
-        cross="${MKFS_ARCH}-linux-gnu-"
-    fi
+    local cross="$1"
     pushd "$BUSYBOX_SRC_DIR" >/dev/null
     info "Cleaning: make distclean"
     make distclean
@@ -90,6 +86,35 @@ mkfs_build_busybox() {
     popd >/dev/null
 }
 
+mkfs_cross_compile() {
+    case "$MKFS_ARCH" in
+        x86_64)
+            printf '%s\n' "${X86_CROSS_COMPILE:-}"
+            ;;
+        loongarch64)
+            if [[ -n "${LOONGARCH64_CROSS_COMPILE:-}" ]]; then
+                printf '%s\n' "${LOONGARCH64_CROSS_COMPILE}"
+            elif command -v loongarch64-linux-gnu-gcc >/dev/null 2>&1; then
+                printf '%s\n' "loongarch64-linux-gnu-"
+            elif command -v loongarch64-linux-musl-gcc >/dev/null 2>&1; then
+                printf '%s\n' "loongarch64-linux-musl-"
+            else
+                printf '%s\n' "loongarch64-linux-gnu-"
+            fi
+            ;;
+        *)
+            printf '%s\n' "${MKFS_ARCH}-linux-gnu-"
+            ;;
+    esac
+}
+
+mkfs_check_toolchain() {
+    local cross="$1"
+    if [[ -n "$cross" ]] && ! command -v "${cross}gcc" >/dev/null 2>&1; then
+        die "Cross compiler not found: ${cross}gcc"
+    fi
+}
+
 mkfs_create_init() {
     printf '%s\n' \
         '#!/bin/sh' \
@@ -99,24 +124,24 @@ mkfs_create_init() {
         '    /bin/busybox --install -s >/dev/null 2>&1' \
         'fi' \
         '' \
-        'TTY_DEV=/dev/console' \
-        '[ -c /dev/ttyAMA0 ] && TTY_DEV=/dev/ttyAMA0' \
-        '[ -c /dev/ttyS0 ] && TTY_DEV=/dev/ttyS0' \
-        '' \
-        'if [ ! -w "$TTY_DEV" ]; then' \
-        '    echo "[ERROR] TTY_DEV ($TTY_DEV) is not writable. Falling back to /dev/console."' \
-        '    TTY_DEV=/dev/console' \
-        'fi' \
-        '' \
         '/bin/busybox mkdir -p /proc /sys /dev /dev/pts /etc/init.d' \
         '/bin/busybox mount -t proc proc /proc >/dev/null 2>&1' \
         '/bin/busybox mount -t sysfs sysfs /sys >/dev/null 2>&1' \
         '/bin/busybox mount -t devtmpfs devtmpfs /dev >/dev/null 2>&1 || true' \
         '/bin/busybox mount -t devpts devpts /dev/pts >/dev/null 2>&1 || true' \
         '' \
-        'echo "test pass!" > "$TTY_DEV" 2>/dev/null || echo "test pass!"' \
-        'if command -v cttyhack >/dev/null 2>&1; then' \
-        '    exec /bin/busybox cttyhack /bin/sh -i' \
+        'TTY_DEV=/dev/console' \
+        'for dev in /dev/ttyS0 /dev/ttyAMA0 /dev/console; do' \
+        '    if [ -c "$dev" ] && [ -w "$dev" ]; then' \
+        '        TTY_DEV="$dev"' \
+        '        break' \
+        '    fi' \
+        'done' \
+        '' \
+        'exec < "$TTY_DEV" > "$TTY_DEV" 2>&1' \
+        'echo "test pass!"' \
+        'if command -v setsid >/dev/null 2>&1 && command -v cttyhack >/dev/null 2>&1; then' \
+        '    exec /bin/busybox setsid /bin/busybox cttyhack /bin/sh -i' \
         'elif command -v setsid >/dev/null 2>&1; then' \
         '    exec /bin/busybox setsid /bin/sh -i' \
         'else' \
@@ -133,8 +158,9 @@ mkfs_create_init() {
 
 mkfs_pack_fs() {
     # 0. Prepare working directory
-    OUTPUT_DIR="${MKFS_OUT_DIR:-${ROOT_DIR}/IMAGES/qemu/linux/${MKFS_ARCH}}"
+    OUTPUT_DIR="${MKFS_OUT_DIR:-${ROOT_DIR}/IMAGES/qemu/${MKFS_ARCH}/linux}"
     mkdir -p "$OUTPUT_DIR"
+    OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd -P)"
     
     # Convert guest directory to absolute path before changing directory
     if [[ -n "$MKFS_GUEST_DIR" ]]; then
@@ -219,6 +245,10 @@ mkfs_pack_fs() {
         echo "Error: debugfs not found. Please install: sudo apt install e2fsprogs" >&2
         return 1
     fi
+    if ! command -v e2fsck >/dev/null 2>&1; then
+        echo "Error: e2fsck not found. Please install: sudo apt install e2fsprogs" >&2
+        return 1
+    fi
     find . -type d | while read -r d; do
         debugfs -w -R "mkdir ${d#.}" "$img_out" >/dev/null 2>&1
     done
@@ -231,11 +261,16 @@ mkfs_pack_fs() {
         target=$(readlink "$lnk")
         debugfs -w -R "symlink ${lnk#.} $target" "$img_out" >/dev/null 2>&1
     done
+    e2fsck -fy "$img_out" >/dev/null
     echo "rootfs.img created: $img_out"
     du -h "$img_out" | awk '{print "Size: "$1}'
 }
 
 mkfs() {
+    local cross
+    cross="$(mkfs_cross_compile)"
+    mkfs_check_toolchain "$cross"
+
     info "Cloning busybox source repository $BUSYBOX_REPO_URL -> $BUSYBOX_SRC_DIR"
     clone_repository "$BUSYBOX_REPO_URL" "$BUSYBOX_SRC_DIR"
 
@@ -245,7 +280,7 @@ mkfs() {
     fi
 
     info "Starting to build busybox..."
-    mkfs_build_busybox
+    mkfs_build_busybox "$cross"
 
     info "Packing filesystem..."
     mkfs_pack_fs
@@ -259,7 +294,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             mkfs_usage
             exit 0
             ;;
-        aarch64|riscv64|x86_64)
+        aarch64|riscv64|x86_64|loongarch64)
             MKFS_ARCH="$cmd"
             ;;
         *)
@@ -269,6 +304,13 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
     # Parse the other arguments
     mkfs_parse_args "$@"
+
+    case " ${MKFS_ARGS} " in
+        *" -h "*|*" --help "*|*" help "*)
+            mkfs_usage
+            exit 0
+            ;;
+    esac
 
     # Call the main function
     mkfs

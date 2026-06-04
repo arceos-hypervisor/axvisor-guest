@@ -108,6 +108,10 @@ pack() {
 
     echo "Starting to package system images under $IMAGES_DIR directory..."
     pack_images
+
+    if [ -n "${GITHUB_OUTPUT:-}" ]; then
+        echo "RELEASE_DIR=$RELEASE_DIR" >> "$GITHUB_OUTPUT"
+    fi
 }
 
 github_parse_args() {

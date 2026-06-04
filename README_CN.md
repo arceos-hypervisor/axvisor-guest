@@ -21,7 +21,7 @@
 | ROC-RK3588-PC 开发板 | aarch64 | 通过内网 `10.3.10.194` 服务器的特定目录下 SDK 源码构建 | 同上 | `IMAGES/roc-rk3588-pc/linux`、`IMAGES/roc-rk3588-pc/arceos` |
 | EVM3588 开发板 | aarch64 | 通过内网 `10.3.10.194` 服务器的特定目录下 SDK 源码构建 | 同上 | `IMAGES/evm3588/linux`、`IMAGES/evm3588/arceos` |
 | TAC-E400-PLC 工业控制器 | aarch64 | 拉取 `tac-e400-plc` 私有仓库后构建 | 同上 | `IMAGES/tac-e400-plc/linux`、`IMAGES/tac-e400-plc/arceos` |
-| QEMU 虚拟机 | aarch64 / riscv64 / x86_64 | 克隆主线 Linux 并交叉编译，配合 `scripts/mkfs.sh` 生成根文件系统 | 同上 | `IMAGES/qemu/linux/<arch>`、`IMAGES/qemu/arceos/<arch>` |
+| QEMU 虚拟机 | aarch64 / riscv64 / x86_64 / loongarch64 | 克隆主线 Linux 并交叉编译，配合 `scripts/mkfs.sh` 生成根文件系统 | 同上 | `IMAGES/qemu/<arch>/linux`、`IMAGES/qemu/<arch>/arceos` |
 | 香橙派 5 Plus | aarch64 | 直接克隆 [orangepi-build](https://github.com/orangepi-xunlong/orangepi-build) 源码来构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
 | 黑芝麻 A1000 域控制器 | aarch64 | 拉取 `bst-a1000` 私有仓库后构建 | 同上 | `IMAGES/orangepi/linux`、`IMAGES/orangepi/arceos` |
 
@@ -43,10 +43,11 @@ sudo apt install \
   flex bison libelf-dev libssl-dev \
   gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
   gcc-riscv64-linux-gnu g++-riscv64-linux-gnu \
+  gcc-14-loongarch64-linux-gnu g++-14-loongarch64-linux-gnu \
   bc fakeroot coreutils cpio gzip rsync file \
   debootstrap binfmt-support debian-archive-keyring eatmydata \
   python3 python3-venv curl git openssh-client libmpc-dev libgmp-dev \
-  lz4 chrpath gawk texinfo chrpath diffstat expect cmake
+  device-tree-compiler lz4 chrpath gawk texinfo chrpath diffstat expect cmake
 ```
 
 若在容器或 CI 中运行脚本，需提前准备好代理、APT 缓存和 SSH 凭据，否则克隆和远程构建步骤会失败。为方便执行，建议赋予各个脚本执行权限：
@@ -81,6 +82,7 @@ scripts/phytiumpi.sh clean            # 清理产物
 
 scripts/qemu.sh aarch64 linux         # QEMU aarch64 Linux
 scripts/qemu.sh riscv64 all           # riscv64 Linux + ArceOS + 根文件系统
+scripts/qemu.sh loongarch64 linux     # QEMU LoongArch64 Linux + 根文件系统
 scripts/qemu.sh x86_64 clean          # 清理 QEMU x86_64 产物
 
 scripts/tac-e400-plc.sh all           # TAC-E400-PLC 全量构建
@@ -92,7 +94,7 @@ scripts/evm3588.sh arceos             # 仅 ArceOS 固件
 若只需生成最小根文件系统，可单独执行 `scripts/mkfs.sh` 产出 `initramfs.cpio.gz` 和 `rootfs.img`（QEMU 流程会自动调用该脚本）。脚本支持 `--out_dir`、`--guest` 等参数，可按需自定义输出目录或添加额外的 guest 文件：
 
 ```bash
-scripts/mkfs.sh aarch64 --out_dir IMAGES/qemu/linux/aarch64
+scripts/mkfs.sh aarch64 --out_dir IMAGES/qemu/aarch64/linux
 scripts/mkfs.sh aarch64 --guest /path/to/guest/files
 ```
 
@@ -110,12 +112,13 @@ scripts/mkfs.sh aarch64 --guest /path/to/guest/files
 | `evm3588/arceos` | 对应 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
 | `tac-e400-plc/linux` | PLC Linux 内核与设备树 | `Image`、`e2000q-hanwei-board.dtb` |
 | `tac-e400-plc/arceos` | 对应 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
-| `qemu/linux/aarch64` | QEMU aarch64 内核与根文件系统 | `Image`、`initramfs.cpio.gz`、`rootfs.img` |
-| `qemu/linux/riscv64` | QEMU riscv64 内核与根文件系统 | `Image`、`initramfs.cpio.gz`、`rootfs.img` |
-| `qemu/linux/x86_64` | QEMU x86_64 内核与根文件系统 | `bzImage`、`initramfs.cpio.gz`、`rootfs.img` |
-| `qemu/arceos/aarch64` | QEMU aarch64 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
-| `qemu/arceos/riscv64` | QEMU riscv64 ArceOS 固件 | `arceos-riscv64-dyn-smp1.bin` |
-| `qemu/arceos/x86_64` | QEMU x86_64 ArceOS 固件 | `arceos-x86_64-dyn-smp1.bin` |
+| `qemu/aarch64/linux` | QEMU aarch64 内核与根文件系统 | `qemu-aarch64`、`initramfs.cpio.gz`、`rootfs.img` |
+| `qemu/riscv64/linux` | QEMU riscv64 内核与根文件系统 | `qemu-riscv64`、`initramfs.cpio.gz`、`rootfs.img` |
+| `qemu/x86_64/linux` | QEMU x86_64 内核与根文件系统 | `qemu-x86_64`、`initramfs.cpio.gz`、`rootfs.img` |
+| `qemu/loongarch64/linux` | QEMU LoongArch64 内核与根文件系统 | `qemu-loongarch64`、`initramfs.cpio.gz`、`rootfs.img` |
+| `qemu/aarch64/arceos` | QEMU aarch64 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
+| `qemu/riscv64/arceos` | QEMU riscv64 ArceOS 固件 | `arceos-riscv64-dyn-smp1.bin` |
+| `qemu/x86_64/arceos` | QEMU x86_64 ArceOS 固件 | `arceos-x86_64-dyn-smp1.bin` |
 | `orangepi/linux` | Orange Pi 5 Plus 厂商 SDK 或本地构建 | `boot.img`、`parameter.txt`、`u-boot.img`、`orangepi5-plus.dtb`、`Image` |
 | `orangepi/arceos` | 对应 ArceOS 固件 | `arceos-aarch64-dyn-smp1.bin` |
 | `bst-a1000/linux` | 黑芝麻 A1000 域控制 Linux 源码构建 |  `Image`、`bsta1000b-fada.dtb`、`bsta1000b-fadb.dtb` |
@@ -190,7 +193,7 @@ python3 http_server.py stop --port 9000
 
 ```bash
 # 下载 QEMU aarch64 的内核镜像
-wget http://127.0.0.1:9000/qemu/linux/aarch64/Image
+wget http://127.0.0.1:9000/qemu/aarch64/linux/qemu-aarch64
 
 # 下载 Phytium ArceOS 固件
 curl -O http://127.0.0.1:9000/phytiumpi/arceos/arceos-aarch64-dyn-smp1.bin

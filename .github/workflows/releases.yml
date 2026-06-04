@@ -22,11 +22,16 @@ jobs:
             loongarch64-unknown-none-softfloat
       - run: cargo install cargo-binutils
       - name: Build for all platforms
+        env:
+          LANG: C.UTF-8
+          LC_ALL: C.UTF-8
+          LC_CTYPE: C.UTF-8
         run: |
           set -e
           ./build.sh qemu-x86_64
           ./build.sh qemu-riscv64
           ./build.sh qemu-aarch64
+          ./build.sh qemu-loongarch64 linux
           ./build.sh phytiumpi
           ./build.sh tac-e400-plc
         
